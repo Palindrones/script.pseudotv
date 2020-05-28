@@ -434,7 +434,7 @@ class ChannelList:
     # Based on a smart playlist, create a normal playlist that can actually be used by us
     def makeChannelList(self, channel, chtype, setting1, setting2, append = False):
         self.log('makeChannelList ' + str(channel))
-        israndom = False
+        israndom = True
         fileList = []
 
         if chtype == 7:
