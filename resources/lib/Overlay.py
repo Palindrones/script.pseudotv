@@ -277,7 +277,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def Error(self, line1, line2 = '', line3 = ''):
         self.log('FATAL ERROR: ' + line1 + " " + line2 + " " + line3, xbmc.LOGFATAL)
         dlg = xbmcgui.Dialog()
-        dlg.ok(xbmc.getLocalizedString(257), line1, line2, line3)
+        dlg.ok(xbmc.getLocalizedString(257), line1 + " " + line2 + " " + line3)
         del dlg
         self.end()
 

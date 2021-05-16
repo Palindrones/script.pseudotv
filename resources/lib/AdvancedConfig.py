@@ -85,7 +85,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
 
                 self.close()
         elif action == ACTION_MOVE_DOWN:
-            if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
+            if 119 < focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
                 if (focusid == (119 + RULES_PER_PAGE)) and (self.lineSelected == (RULES_PER_PAGE - 1)):
                     curoffset = self.listOffset
@@ -110,7 +110,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                     else:
                         self.optionRowSelected = 1
         elif action == ACTION_MOVE_UP:
-            if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
+            if 119 < focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
                 if (focusid == 120) and (self.lineSelected == 0):
                     curoffset = self.listOffset

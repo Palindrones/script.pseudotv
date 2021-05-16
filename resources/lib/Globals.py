@@ -17,7 +17,10 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import xbmcaddon, xbmc, xbmcgui, xbmcvfs
+import xbmcaddon
+import xbmc
+import xbmcgui
+import xbmcvfs
 import Settings
 
 from FileAccess import FileLock
@@ -26,7 +29,7 @@ ADDON = xbmcaddon.Addon(id='script.pseudotv')
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_NAME = ADDON.getAddonInfo('name')
 LANGUAGE = ADDON.getLocalizedString
-CWD = ADDON.getAddonInfo('path').decode("utf-8")
+CWD = ADDON.getAddonInfo('path')
 VERSION = ADDON.getAddonInfo('version')
 ICON = ADDON.getAddonInfo('icon')
 
@@ -37,18 +40,10 @@ def log(msg, level = xbmc.LOGDEBUG):
         pass
 
 
-def uni(string, encoding = 'utf-8'):
-    if isinstance(string, basestring):
-        if not isinstance(string, unicode):
-           string = unicode(string, encoding)
-
+def uni(string, encoding = 'utf-8'): 
     return string
 
-def ascii(string):
-    if isinstance(string, basestring):
-        if isinstance(string, unicode):
-           string = string.encode('ascii', 'ignore')
-
+def ascii(string): 
     return string
 
 
@@ -65,7 +60,7 @@ MODE_RANDOM = 8
 MODE_REALTIME = 16
 MODE_STARTMODES = MODE_RANDOM | MODE_REALTIME | MODE_RESUME
 
-SETTINGS_LOC = ADDON.getAddonInfo('profile').decode("utf-8")
+SETTINGS_LOC = ADDON.getAddonInfo('profile')
 CHANNEL_SHARING = False
 LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache' + '/'))
 

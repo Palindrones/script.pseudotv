@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc
-import os, struct
+import struct
 
 from Globals import ascii
 from FileAccess import FileAccess
