@@ -3,7 +3,9 @@
 
 import os
 import xml.etree.ElementTree as ET
-import xbmc, xbmcaddon, xbmcvfs
+import xbmc
+import xbmcaddon
+import xbmcvfs
 
 ADDON = xbmcaddon.Addon(id='script.pseudotv')
 SkinPath = xbmc.translatePath('special://skin')
@@ -36,7 +38,7 @@ def getFontsXML():
 
 def isFontInstalled(fontxml_path, fontname):
     name = "<name>%s</name>" % fontname
-    if not name in file(fontxml_path, "r").read():
+    if not name in open(fontxml_path, "r").read():
         return False
     else:
         return True

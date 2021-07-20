@@ -76,7 +76,7 @@ class ResetWatched:
 
     def sendJSON(self, command):
         data = xbmc.executeJSONRPC(command)
-        return unicode(data, 'utf-8', errors='ignore')
+        return str(data, 'utf-8', errors='ignore')
 
     def load(self, filename):
         self.log("Reset " + filename)
@@ -94,8 +94,7 @@ class ResetWatched:
         try:
             lines = fle.readlines()
         except:
-            self.log("ERROR loading playlist: " + filename)
-            self.log(traceback.format_exc(), xbmc.LOGERROR)
+            self.log("ERROR loading playlist: " + filename + xbmc.LOGERROR)
 
         fle.close()
         realindex = -1
@@ -122,8 +121,7 @@ class ResetWatched:
             try:
                 line = uni(lines[realindex].rstrip())
             except:
-                self.log("ERROR: Invalid line in playlist - " + filename)
-                self.log(traceback.format_exc(), xbmc.LOGERROR)
+                self.log("ERROR: Invalid line in playlist - " + filename + xbmc.LOGERROR)
 
             if line[:8] == '#EXTINF:':
                 tmpitem = PlaylistItem()

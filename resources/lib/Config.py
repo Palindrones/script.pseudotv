@@ -25,8 +25,8 @@ import random
 
 
 ADDON       = xbmcaddon.Addon(id='script.pseudotv')
-CWD         = ADDON.getAddonInfo('path').decode("utf-8")
-RESOURCE    = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8")).decode("utf-8")
+CWD         = ADDON.getAddonInfo('path')
+RESOURCE    = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8"))
 
 sys.path.append(RESOURCE)
 

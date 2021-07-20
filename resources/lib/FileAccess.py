@@ -17,9 +17,13 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc
-import subprocess, os, shutil
-import time, threading
-import random, os
+
+import shutil
+import time
+import subprocess
+import threading
+import random
+import os
 import Globals
 import codecs
 import xbmcvfs
@@ -178,7 +182,7 @@ class VFSFile:
 
 
     def write(self, data):
-        if isinstance(data, unicode):
+        if isinstance(data, str):
             data = bytearray(data, "utf-8")
             data = bytes(data)
 

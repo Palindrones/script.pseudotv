@@ -23,8 +23,8 @@ import datetime
 import sys, re
 import random
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+#reload(sys)
+#sys.setdefaultencoding('utf-8')
 
 from xml.dom.minidom import parse, parseString
 
@@ -169,7 +169,7 @@ class ChannelList:
 
     def sendJSON(self, command):
         data = xbmc.executeJSONRPC(command)
-        return unicode(data, 'utf-8', errors='ignore')
+        return data
 
 
     def setupChannel(self, channel, background = False, makenewlist = False, append = False):
@@ -434,7 +434,7 @@ class ChannelList:
     # Based on a smart playlist, create a normal playlist that can actually be used by us
     def makeChannelList(self, channel, chtype, setting1, setting2, append = False):
         self.log('makeChannelList ' + str(channel))
-        israndom = False
+        israndom = True
         fileList = []
 
         if chtype == 7:
@@ -1147,8 +1147,6 @@ class ChannelList:
             rules = dom1.getElementsByTagName('rule')
             order = dom1.getElementsByTagName('order')
         except:
-            self.log('buildMixedFileList Problem parsing playlist ' + filename, xbmc.LOGERROR)
-            xml.close()
             return fileList
 
         for rule in rules:
