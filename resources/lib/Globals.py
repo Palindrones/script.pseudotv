@@ -79,6 +79,8 @@ CHANNELS_LOC = os.path.join(SETTINGS_LOC, 'cache' + '/')
 GEN_CHAN_LOC = os.path.join(CHANNELS_LOC, 'generated' + '/')
 MADE_CHAN_LOC = os.path.join(CHANNELS_LOC, 'stored' + '/')
 CHANNELBUG_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'ChannelBug' + '/'))
+TEMP_CHANNELS_LOC = os.path.join(LOCK_LOC, 'cache' + '/')
+
 
 CHANNELBUG_POS =[[19,19],[1695,19],[1695,952],[19,952]]
 

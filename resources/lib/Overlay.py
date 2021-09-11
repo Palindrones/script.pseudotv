@@ -126,6 +126,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     # override the doModal function so we can setup everything first
     def onInit(self):
         self.log('onInit')
+        
+        # Don't allow any actions during initialization
+        self.actionSemaphore.acquire()
+        self.timeStarted = time.time()
 
         if FileAccess.exists(GEN_CHAN_LOC) == False:
             try:
@@ -148,45 +152,46 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.Error(LANGUAGE(30036))
                     return
 
-        self.getControl(102).setVisible(False)
-        self.backupFiles()
-        ADDON_SETTINGS.loadSettings()
+        try:
+            self.getControl(102).setVisible(False)
+            self.backupFiles()
+            ADDON_SETTINGS.loadSettings()
 
-        if CHANNEL_SHARING:
-            updateDialog = xbmcgui.DialogProgressBG()
-            updateDialog.create(ADDON_NAME, '')
-            updateDialog.update(1, message='Initializing Channel Sharing')
-            FileAccess.makedirs(LOCK_LOC)
-            updateDialog.update(50, message='Initializing Channel Sharing')
-            self.isMaster = GlobalFileLock.lockFile("MasterLock", False)
-            updateDialog.update(100, message='Initializing Channel Sharing')
-            xbmc.sleep(200)
-            updateDialog.close()
-        else:
-            self.isMaster = True
+            if CHANNEL_SHARING:
+                updateDialog = xbmcgui.DialogProgressBG()
+                updateDialog.create(ADDON_NAME, '')
+                updateDialog.update(1, message='Initializing Channel Sharing')
+                FileAccess.makedirs(LOCK_LOC)
+                updateDialog.update(50, message='Initializing Channel Sharing')
+                self.isMaster = GlobalFileLock.lockFile("MasterLock", False)
+                updateDialog.update(100, message='Initializing Channel Sharing')
+                xbmc.sleep(200)
+                updateDialog.close()
+            else:
+                self.isMaster = True
 
-        if self.isMaster:
-            migratemaster = Migrate()
-            migratemaster.migrate()
+            if self.isMaster:
+                migratemaster = Migrate()
+                migratemaster.migrate()
 
-        self.channelLabelTimer = threading.Timer(3.0, self.hideChannelLabel)
-        self.playerTimer = threading.Timer(2.0, self.playerTimerAction)
-        self.playerTimer.name = "PlayerTimer"
-        self.infoTimer = threading.Timer(5.0, self.hideInfo)
-        self.myEPG = EPGWindow("script.pseudotv.EPG.xml", CWD, "default")
-        self.myEPG.MyOverlayWindow = self
-        # Don't allow any actions during initialization
-        self.actionSemaphore.acquire()
-        self.timeStarted = time.time()
+            self.channelLabelTimer = threading.Timer(3.0, self.hideChannelLabel)
+            self.playerTimer = threading.Timer(2.0, self.playerTimerAction)
+            self.playerTimer.name = "PlayerTimer"
+            self.infoTimer = threading.Timer(5.0, self.hideInfo)
+            self.myEPG = EPGWindow("script.pseudotv.EPG.xml", CWD, "default")
+            self.myEPG.MyOverlayWindow = self
 
-        if self.readConfig() == False:
-            return
+            if self.readConfig() == False:
+                return
 
-        self.myEPG.channelLogos = self.channelLogos
-        self.maxChannels = len(self.channels)
+            self.myEPG.channelLogos = self.channelLogos
+            self.maxChannels = len(self.channels)
 
-        if self.maxChannels == 0:
-            self.Error(LANGUAGE(30037))
+            if self.maxChannels == 0:
+                self.Error(LANGUAGE(30037))
+                return
+        except Exception as e:
+            self.Error(LANGUAGE(30038), str(e))
             return
 
         found = False
@@ -303,9 +308,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
         realloc = xbmc.translatePath(os.path.join(realloc, 'cache')) + '/'
 
-        for i in range(1000):
-            FileAccess.copy(realloc + 'channel_' + str(i) + '.m3u', CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
+        def listdir_fullpath(dir):
+            return [uni(os.path.join(dir, f)) for f in xbmcvfs.listdir(dir)[1]]
 
+        #copy all the channels from remote location
+        file_detail = listdir_fullpath(realloc)
+        for f in file_detail:
+            afile = os.path.basename(f)
+            bfile, ext = os.path.splitext(afile)
+            if ext  == '.m3u' or ext  == '.M3U':
+                FileAccess.copy(f, CHANNELS_LOC + afile)
 
     def storeFiles(self):
         self.log('storeFiles')
@@ -928,19 +940,25 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         GlobalFileLock.close()
 
-        if self.playerTimer.isAlive():
-            self.playerTimer.cancel()
-            self.playerTimer.join()
+        try:
+            if self.playerTimer is not None and self.playerTimer.isAlive():
+                self.playerTimer.cancel()
+                self.playerTimer.join()
+        except :
+            pass
 
-        if self.Player.isPlaying():
-            self.lastPlayTime = self.Player.getTime()
-            self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
-            self.Player.stop()
+        try:
+            if self.Player is not None and self.Player.isPlaying():
+                self.lastPlayTime = self.Player.getTime()
+                self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
+                self.Player.stop()
+        except :
+            pass
 
         updateDialog.update(2, message='Exiting - Stopping Threads')
 
         try:
-            if self.channelLabelTimer.isAlive():
+            if self.channelLabelTimer is not None and self.channelLabelTimer.isAlive():
                 self.channelLabelTimer.cancel()
                 self.channelLabelTimer.join()
         except:

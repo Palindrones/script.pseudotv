@@ -22,38 +22,37 @@ import time, traceback
 import Globals
 
 from FileAccess import FileLock, FileAccess
-
-
+from xml.dom.minidom import parse, parseString, Document
 
 class Settings:
+    currentSettings = {}
+
     def __init__(self):
         self.logfile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))
-        self.currentSettings = []
         self.alwaysWrite = 1
 
 
     def loadSettings(self):
         self.log("Loading settings from " + self.logfile)
-        del self.currentSettings[:]
+        #self.currentSettings.clear()
 
-        if FileAccess.exists(self.logfile):
+        if FileAccess.exists(self.logfile) and len(self.currentSettings) == 0:
             try:
                 fle = FileAccess.open(self.logfile, "r")
-                curset = fle.readlines()
+                dom = parse(fle)
+                settings = dom.getElementsByTagName('setting')
                 fle.close()
             except:
                 self.log("Exception when reading settings: ")
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
+                fle.close()
 
-            for line in curset:
-                name = re.search('setting id="(.*?)"', line)
+            for setting in settings:
+                name = setting.getAttribute("id")
+                value = setting.getAttribute("value")
 
-                if name:
-                    val = re.search(' value="(.*?)"', line)
-
-                    if val:
-                        self.currentSettings.append([name.group(1), val.group(1)])
-
+                if value:
+                    self.currentSettings[name] = value
 
     def disableWriteOnSave(self):
         self.alwaysWrite = 0
@@ -67,7 +66,7 @@ class Settings:
         if force:
             self.loadSettings()
 
-        result = self.getSettingNew(name)
+        result = self.currentSettings.get(name)
 
         if result is None:
             return self.realGetSetting(name)
@@ -75,15 +74,9 @@ class Settings:
         return result
 
 
-    def getSettingNew(self, name):
-        for i in range(len(self.currentSettings)):
-            if self.currentSettings[i][0] == name:
-                return self.currentSettings[i][1]
-
-        return None
-
-
     def realGetSetting(self, name):
+        self.log("realGetSetting - %s" % name)
+
         try:
             val = Globals.ADDON.getSetting(name)
             return val
@@ -92,33 +85,29 @@ class Settings:
 
 
     def setSetting(self, name, value):
-        found = False
-
-        for i in range(len(self.currentSettings)):
-            if self.currentSettings[i][0] == name:
-                self.currentSettings[i][1] = value
-                found = True
-                break
-
-        if found == False:
-            self.currentSettings.append([name, value])
-
+        self.currentSettings[name] = value
         if self.alwaysWrite == 1:
             self.writeSettings()
 
 
     def writeSettings(self):
+        doc = Document()
+        xml = doc.createElement('settings')  
+        doc.appendChild(xml) 
+
+        for name in sorted(self.currentSettings.keys()):
+            element = doc.createElement('setting')
+            element.setAttribute("id", name)
+            element.setAttribute("value",self.currentSettings[name])
+            xml.appendChild(element) 
+            
         try:
             fle = FileAccess.open(self.logfile, "w")
+            fle.write(doc.toprettyxml())
+            fle.close()
         except:
-            self.log("Unable to open the file for writing")
+            self.log("Unable to write the file")
+            self.log(traceback.format_exc(), xbmc.LOGERROR)
+            fle.close()
             return
 
-        flewrite = Globals.uni("<settings>\n")
-
-        for i in range(len(self.currentSettings)):
-            flewrite += Globals.uni('    <setting id="') + Globals.uni(self.currentSettings[i][0]) + Globals.uni('" value="') + Globals.uni(self.currentSettings[i][1]) + Globals.uni('" />\n')
-
-        flewrite += Globals.uni('</settings>\n')
-        fle.write(flewrite)
-        fle.close()
