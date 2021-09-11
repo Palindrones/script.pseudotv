@@ -57,7 +57,7 @@ class FileAccess:
 
     @staticmethod
     def copy(orgfilename, newfilename):
-        FileAccess.log('copying ' + orgfilename + ' to ' + newfilename)
+        FileAccess.log('copying ' + orgfilename + ' to ' + newfilename, xbmc.LOGINFO)
         xbmcvfs.copy(orgfilename, newfilename)
         return True
 

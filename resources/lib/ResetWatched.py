@@ -56,20 +56,25 @@ class ResetWatched:
     def findMaxChannels(self):
         self.log('findMaxChannels')
         self.maxChannels = 0
+        self.enteredChannelCount = 0
+        
+        #recreate use settings-channels instead
+        try:
+            settingChannels = [channel for channel in ADDON_SETTINGS.currentSettings.items() if '_type' in channel[0] ]
+            for settingName,settingValue in settingChannels:
+                iChannel = int(settingName.replace("Channel_","").replace("_type",""))
+                chtype = int(settingValue)
+                if iChannel > self.maxChannels:
+                    self.maxChannels = iChannel
 
-        for i in range(999):
-            chtype = 9999
-
-            try:
-                chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i + 1) + '_type'))
-                if chtype != 9999:
-                    self.maxChannels = i + 1
-            except:
-                pass
-
-        self.log('findMaxChannels return: '  + str(self.maxChannels))
-        return(self.maxChannels)
-
+                if self.forceReset and (chtype != 9999):
+                    ADDON_SETTINGS.setSetting( settingName.replace("_type","_changed"), "True")
+                    
+                self.enteredChannelCount += 1
+        except Exception as e:
+            raise Exception("findMaxChannels exception:", str(e),  str(ADDON_SETTINGS.currentSettings))
+        
+        self.log('findMaxChannels return ' + str(self.maxChannels))
 
     def clear(self):
         del self.itemlist[:]

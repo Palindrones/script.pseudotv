@@ -706,11 +706,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         pos = self.MyOverlayWindow.channels[newchan - 1].playlistPosition
         showoffset = self.MyOverlayWindow.channels[newchan - 1].showTimeOffset
 
-        # adjust the show and time offsets to properly position inside the playlist
-        while showoffset + timedif > self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos):
-            timedif -= self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) - showoffset
-            pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
-            showoffset = 0
+        # # adjust the show and time offsets to properly position inside the playlist
+        # while showoffset + timedif > self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos):
+            # timedif -= self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) - showoffset
+            # pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
+            # showoffset = 0
 
         if self.MyOverlayWindow.currentChannel == newchan:
             if plpos == xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition():
