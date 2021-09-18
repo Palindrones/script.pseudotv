@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
+
 import subprocess, os
 import time, threading
 import datetime
@@ -98,7 +99,7 @@ class ChannelList:
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
             self.updateDialogProgress = i * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(i + 1)), LANGUAGE(30165))
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(i + 1)), LANGUAGE(30165)]))
             self.channels.append(Channel())
 
             # If the user pressed cancel, stop everything and exit
@@ -118,7 +119,7 @@ class ChannelList:
         if foundvalid == False and makenewlists == False:
             for i in range(self.maxChannels):
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(i + 1)), LANGUAGE(30165), '')
+                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(i + 1)), LANGUAGE(30165)]))
                 self.setupChannel(i + 1, False, True, False)
 
                 if self.channels[i].isValid:
@@ -213,7 +214,7 @@ class ChannelList:
                 createlist = True
 
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30171), '')
+                    self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channel)), LANGUAGE(30171)]))
 
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
@@ -274,7 +275,7 @@ class ChannelList:
         if ((createlist or needsreset) and makenewlist) or append:
             if self.background == False:
                 self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(channel)), LANGUAGE(30172), '')
+                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(channel)), LANGUAGE(30172)]))
 
             if self.makeChannelList(channel, chtype, chsetting1, chsetting2, append) == True:
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') == True:
@@ -296,7 +297,7 @@ class ChannelList:
         # Don't clear history when appending channels
         if self.background == False and append == False and self.myOverlay.isMaster:
             self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30173), '')
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channel)), LANGUAGE(30173)]))
             self.clearPlaylistHistory(channel)
 
         if append == False:
@@ -400,7 +401,7 @@ class ChannelList:
     # Open the smart playlist and read the name out of it...this is the channel name
     def getSmartPlaylistName(self, fle):
         self.log('getSmartPlaylistName')
-        fle = xbmc.translatePath(fle)
+        fle = xbmcvfs.translatePath(fle)
 
         try:
             xml = FileAccess.open(fle, "r")
@@ -442,14 +443,14 @@ class ChannelList:
                 playlistName = rule.firstChild.nodeValue
 
                 if FileAccess.exists(playlistName):  #playlistName is full filepath
-                    FileAccess.copy(playlistName, xbmc.translatePath('special://profile/playlists/video/') + os.path.basename(playlistName))
+                    FileAccess.copy(playlistName, xbmcvfs.translatePath('special://profile/playlists/video/') + os.path.basename(playlistName))
                     rule.firstChild.nodeValue = os.path.basename(playlistName)                
                     updateLocalFile = True
                                         
                 elif FileAccess.exists(os.path.join(os.path.dirname(setting1), playlistName)): #check relative path of (parent) channel playlist
-                    FileAccess.copy(os.path.join(os.path.dirname(setting1), playlistName), xbmc.translatePath('special://profile/playlists/video/') + playlistName)
+                    FileAccess.copy(os.path.join(os.path.dirname(setting1), playlistName), xbmcvfs.translatePath('special://profile/playlists/video/') + playlistName)
                     
-                elif FileAccess.exists(xbmc.translatePath('special://profile/playlists/video/') + playlistName): #check local directory
+                elif FileAccess.exists(xbmcvfs.translatePath('special://profile/playlists/video/') + playlistName): #check local directory
                     pass
 
                 else:
@@ -613,7 +614,7 @@ class ChannelList:
 
 
     def createNetworkPlaylist(self, network):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Network_' + network + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Network_' + network + '.xsp')
         network =  self.cleanString(network)
 
         try:
@@ -641,7 +642,7 @@ class ChannelList:
         except:
             pass
 
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + uni(show) + '_' + order + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + uni(show) + '_' + order + '.xsp')
         show = self.cleanString(show)
 
         try:
@@ -659,7 +660,7 @@ class ChannelList:
 
 
     def createGenreMixedPlaylist(self, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Mixed_' + genre + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Mixed_' + genre + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -669,7 +670,7 @@ class ChannelList:
 
         epname = os.path.basename(self.createGenrePlaylist('episodes', 3, genre))
         moname = os.path.basename(self.createGenrePlaylist('movies', 4, genre))
-        
+
         self.writeXSPHeader(fle, 'mixed', self.getChannelName(5, genre))
         self.writeXSPRule(fle, "playlist", "is", epname)
         self.writeXSPRule(fle, "playlist", "is", moname)
@@ -679,7 +680,7 @@ class ChannelList:
 
 
     def createGenrePlaylist(self, pltype, chtype, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -701,7 +702,7 @@ class ChannelList:
 
 
     def createStudioPlaylist(self, studio):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Studio_' + studio + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Studio_' + studio + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -726,7 +727,7 @@ class ChannelList:
             return [uni(os.path.join(dir, f)) for f in xbmcvfs.listdir(dir)[1]]
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30174))
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30174)]))
 
         file_detail = listdir_fullpath(setting1)
 
@@ -742,9 +743,9 @@ class ChannelList:
 
                 if self.background == False:
                     if filecount == 1:
-                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
+                        self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), (LANGUAGE(30175)) % (str(filecount))]))
                     else:
-                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
+                        self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), (LANGUAGE(30176)) % (str(filecount))]))
 
                 afile = os.path.basename(f)
                 afile, ext = os.path.splitext(afile)
@@ -790,7 +791,7 @@ class ChannelList:
         json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetTVShows", "params": {"properties":["studio", "genre","runtime"]}, "id": 1}'
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30177))
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30177)]))
 
         json_folder_detail = self.sendJSON(json_query)
         jsonObject = json.loads(json_folder_detail)
@@ -853,7 +854,7 @@ class ChannelList:
         json_folder_detail = self.sendJSON(json_query)
         jsonObject = json.loads(json_folder_detail)
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30178))
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30178)]))
 
         for f in jsonObject["result"]["movies"]:
             try:
@@ -930,7 +931,7 @@ class ChannelList:
         json_query = '{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "video", "properties":["duration","runtime","showtitle","plot","plotoutline","season","episode","year","lastplayed","playcount","resume"]}, "id": 1}' % (self.escapeDirJSON(dir_name))
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30179))
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30179)]))
 
         json_folder_detail = self.sendJSON(json_query)
         jsonResult = json_folder_detail
@@ -983,9 +984,9 @@ class ChannelList:
                                 #udpate status dialog
                                 if self.background == False:
                                     if filecount == 1:
-                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
+                                        self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount))]))
                                     else:
-                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
+                                        self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount))]))
 
                                 theplot = plotoutline if len(plotoutline) > 0 else ( plot if len(plot) > 0 else LANGUAGE(30023))
                                 theplot = theplot.replace('//','')
@@ -1049,15 +1050,9 @@ class ChannelList:
         if filecount == 0:
             self.log(json_folder_detail)
 
-        # resultFilePath = xbmc.translatePath('special://profile/BACKUP/result_%s.json' % str(channel))
-        # try:
-            # with open(resultFilePath, "w") as write_file:
-                # json.dump(jsonObject, write_file)
-        # except Exception as e:
-            # self.log("json except:" + str(e))                
-
         self.log("buildFileList return")
         return fileList
+
 
     def buildMixedFileList(self, dom1, channel):
         fileList = []
@@ -1072,14 +1067,16 @@ class ChannelList:
         for rule in rules:
             rulename = rule.childNodes[0].nodeValue
 
-            if FileAccess.exists(xbmc.translatePath('special://profile/playlists/video/') + rulename):
-                FileAccess.copy(xbmc.translatePath('special://profile/playlists/video/') + rulename, MADE_CHAN_LOC + rulename)
+            if FileAccess.exists(xbmcvfs.translatePath('special://profile/playlists/video/') + rulename):
+                FileAccess.copy(xbmcvfs.translatePath('special://profile/playlists/video/') + rulename, MADE_CHAN_LOC + rulename)
                 fileList.extend(self.buildFileList(MADE_CHAN_LOC + rulename, channel))
             else:
                 fileList.extend(self.buildFileList(GEN_CHAN_LOC + rulename, channel))
 
         self.log("buildMixedFileList returning")
         return fileList
+
+
     # Run rules for a channel
     def runActions(self, action, channel, parameter):
         self.log("runActions " + str(action) + " on channel " + str(channel))
@@ -1094,7 +1091,7 @@ class ChannelList:
                 self.runningActionId = index
 
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), ''.join(LANGUAGE(30180)) % (str(index + 1)), '')
+                    self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(self.settingChannel)), ''.join(LANGUAGE(30180)) % (str(index + 1))]))
 
                 parameter = rule.runAction(action, self, parameter)
 

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import subprocess, os
 import time, threading
 import datetime
@@ -26,7 +26,7 @@ import random
 
 ADDON       = xbmcaddon.Addon(id='script.pseudotv')
 CWD         = ADDON.getAddonInfo('path')
-RESOURCE    = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8"))
+RESOURCE    = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8"))
 
 sys.path.append(RESOURCE)
 
@@ -415,7 +415,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
     def getSmartPlaylistName(self, fle):
         self.log("getSmartPlaylistName " + fle)
-        fle = xbmc.translatePath(fle)
+        fle = xbmcvfs.translatePath(fle)
 
         try:
             xml = FileAccess.open(fle, "r")

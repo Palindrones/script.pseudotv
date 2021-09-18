@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcaddon
+import xbmc, xbmcaddon, xbmcvfs
 import sys, re, os
 import time, traceback
 import Globals
@@ -28,7 +28,7 @@ class Settings:
     currentSettings = {}
 
     def __init__(self):
-        self.logfile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))
+        self.logfile = xbmcvfs.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))
         self.alwaysWrite = 1
 
 

@@ -17,6 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui
+import xbmcvfs
 import subprocess, os
 import time, threading
 import datetime
@@ -192,6 +193,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 return
         except Exception as e:
             self.Error(LANGUAGE(30038), str(e))
+            self.log(traceback.format_exc(), xbmc.LOGERROR)
             return
 
         found = False
@@ -248,7 +250,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.forceReset = ADDON.getSetting('ForceChannelReset') == "true"
         self.channelResetSetting = ADDON.getSetting('ChannelResetSetting')
         self.log("Channel reset setting - " + str(self.channelResetSetting))
-        self.channelLogos = xbmc.translatePath(ADDON.getSetting('ChannelLogoFolder'))
+        self.channelLogos = xbmcvfs.translatePath(ADDON.getSetting('ChannelLogoFolder'))
         self.backgroundUpdating = int(ADDON.getSetting("ThreadMode"))
         self.log("Background updating - " + str(self.backgroundUpdating))
         self.showNextItem = ADDON.getSetting("EnableComingUp") == "true"
@@ -306,7 +308,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         realloc = ADDON.getSetting('SettingsFolder')
         FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
-        realloc = xbmc.translatePath(os.path.join(realloc, 'cache')) + '/'
+        realloc = xbmcvfs.translatePath(os.path.join(realloc, 'cache')) + '/'
 
         def listdir_fullpath(dir):
             return [uni(os.path.join(dir, f)) for f in xbmcvfs.listdir(dir)[1]]
@@ -327,7 +329,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         realloc = ADDON.getSetting('SettingsFolder')
         FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
-        realloc = xbmc.translatePath(os.path.join(realloc, 'cache')) + '/'
+        realloc = xbmcvfs.translatePath(os.path.join(realloc, 'cache')) + '/'
 
         for i in range(self.maxChannels + 1):
             FileAccess.copy(CHANNELS_LOC + 'channel_' + str(i) + '.m3u', realloc + 'channel_' + str(i) + '.m3u')

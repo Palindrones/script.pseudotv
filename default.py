@@ -17,6 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc
+import xbmcvfs
 import xbmcgui
 import xbmcaddon
 import sys
@@ -26,13 +27,13 @@ ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 CWD = ADDON.getAddonInfo('path')
 #
-RESOURCE = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8")) 
+RESOURCE = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8")) 
 
 sys.path.append(RESOURCE)
 
 SkinID = xbmc.getSkinDir()
 if SkinID != 'skin.estuary':
-    import MyFont
+    import MyFont as MyFont
     if MyFont.getSkinRes() == '1080i':
         MyFont.addFont("PseudoTv10", "NotoSans-Regular.ttf", "23")
         MyFont.addFont("PseudoTv12", "NotoSans-Regular.ttf", "25")

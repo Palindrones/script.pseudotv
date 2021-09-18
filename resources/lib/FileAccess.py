@@ -17,6 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc
+import xbmcvfs
 
 import shutil
 import time
@@ -57,7 +58,7 @@ class FileAccess:
 
     @staticmethod
     def copy(orgfilename, newfilename):
-        FileAccess.log('copying ' + orgfilename + ' to ' + newfilename, xbmc.LOGINFO)
+        FileAccess.log('copying ' + orgfilename + ' to ' + newfilename)
         xbmcvfs.copy(orgfilename, newfilename)
         return True
 

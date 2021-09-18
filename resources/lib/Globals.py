@@ -62,20 +62,18 @@ MODE_STARTMODES = MODE_RANDOM | MODE_REALTIME | MODE_RESUME
 
 SETTINGS_LOC = ADDON.getAddonInfo('profile')
 CHANNEL_SHARING = False
-LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache' + '/'))
+LOCK_LOC = xbmcvfs.translatePath(os.path.join(SETTINGS_LOC, 'cache' + '/'))
 
 if ADDON.getSetting('ChannelSharing') == "true":
     CHANNEL_SHARING = True
-    LOCK_LOC = xbmc.translatePath(os.path.join(ADDON.getSetting('SettingsFolder'), 'cache' + '/'))
+    LOCK_LOC = xbmcvfs.translatePath(os.path.join(ADDON.getSetting('SettingsFolder'), 'cache' + '/'))
 
-IMAGES_LOC = xbmc.translatePath(os.path.join(CWD, 'resources', 'images' + '/'))
-LOGOS_LOC = xbmc.translatePath(os.path.join(CWD, 'resources', 'logos' + '/'))
+IMAGES_LOC = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'images' + '/'))
+LOGOS_LOC = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'logos' + '/'))
 CHANNELS_LOC = os.path.join(SETTINGS_LOC, 'cache' + '/')
 GEN_CHAN_LOC = os.path.join(CHANNELS_LOC, 'generated' + '/')
 MADE_CHAN_LOC = os.path.join(CHANNELS_LOC, 'stored' + '/')
-CHANNELBUG_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'ChannelBug' + '/'))
-TEMP_CHANNELS_LOC = os.path.join(LOCK_LOC, 'cache' + '/')
-
+CHANNELBUG_LOC = xbmcvfs.translatePath(os.path.join(CHANNELS_LOC, 'ChannelBug' + '/'))
 
 CHANNELBUG_POS =[[19,19],[1695,19],[1695,952],[19,952]]
 

@@ -93,6 +93,7 @@ Replace *"Player.DisplayAfterSeek"* with
 ### Branches guide
 
 * **Master branch:** Suitable for Kodi VER:18 and above.
+* **Matrix branch:** Suitable for Kodi VER:19 and above. 
 * **Leia branch:** Suitable for Kodi VER:18.
 * **Krypton branch:** Suitable for Kodi VER:17 and below. 
 

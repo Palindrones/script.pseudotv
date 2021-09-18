@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import subprocess, os
 import time, threading
 import datetime, traceback
@@ -48,10 +48,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.textfont  = "font13"
 
         # Set media path.
-        if os.path.exists(xbmc.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media'))):
-            self.mediaPath = xbmc.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media' + '/'))
+        if os.path.exists(xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media'))):
+            self.mediaPath = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media' + '/'))
         else:
-            self.mediaPath = xbmc.translatePath(os.path.join(CWD, 'resources', 'skins', 'default', 'media' + '/'))
+            self.mediaPath = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'skins', 'default', 'media' + '/'))
 
         self.log('Media Path is ' + self.mediaPath)
 
@@ -455,19 +455,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         lastaction = time.time() - self.lastActionTime
 
         if lastaction >= 2:
-            try:
-                selectedbutton = self.getControl(controlid)
-            except:
-                self.actionSemaphore.release()
-                self.log('onClick unknown controlid ' + str(controlid))
-                return
-
             for i in range(self.rowCount):
                 for x in range(len(self.channelButtons[i])):
                     mycontrol = 0
-                    mycontrol = self.channelButtons[i][x]
+                    mycontrol = self.channelButtons[i][x].getId()
 
-                    if selectedbutton == mycontrol:
+                    if controlid == mycontrol:
                         self.focusRow = i
                         self.focusIndex = x
                         self.selectShow()
@@ -477,6 +470,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.log('onClick found button return')
                         return
 
+            self.log('onClick did not find button for :'+ str(controlid))
             self.lastActionTime = time.time()
             self.closeEPG()
 
@@ -706,11 +700,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         pos = self.MyOverlayWindow.channels[newchan - 1].playlistPosition
         showoffset = self.MyOverlayWindow.channels[newchan - 1].showTimeOffset
 
-        # # adjust the show and time offsets to properly position inside the playlist
-        # while showoffset + timedif > self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos):
-            # timedif -= self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) - showoffset
-            # pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
-            # showoffset = 0
+        # adjust the show and time offsets to properly position inside the playlist
+        while showoffset + timedif > self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos):
+            timedif -= self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) - showoffset
+            pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
+            showoffset = 0
 
         if self.MyOverlayWindow.currentChannel == newchan:
             if plpos == xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition():
