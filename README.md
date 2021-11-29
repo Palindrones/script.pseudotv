@@ -1,3 +1,12 @@
+AS THIS IS A FORK, THIS IS STILL A WORK IN PROGRESS TO MAKE THIS WORK WITH KODI 19. NOTES SO FAR:
+
+Started migration to Kodi 19
+* python 3 migration in progress
+** Moved around a lot of the unicode parsing away since its built in with python 3 (from what i understand so far)
+* Plenty of log statements added to try and see how the process is working but also troubleshooting
+* Known issue at this point would be that once you open the guide you can't select a show to watch. Enter key or clicking the item (via windows) does not work. You can use the arrow keys to navigate but thats it. So thats broken for now. Still working on it.
+* Tested on an android device (shield) and windows version (windows 10 Kodi 19.3)
+
 ![alt text](https://github.com/Steveb1968/script.pseudotv/blob/master/resources/images/Default.png?raw=true "PseudoTV Logo")
 
 PseudoTV for Kodi
