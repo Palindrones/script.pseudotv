@@ -42,17 +42,17 @@ class Settings:
                 dom = parse(fle)
                 settings = dom.getElementsByTagName('setting')
                 fle.close()
+
+                for setting in settings:
+                    name = setting.getAttribute("id")
+                    value = setting.getAttribute("value")
+
+                    if value:
+                        self.currentSettings[name] = value
             except:
                 self.log("Exception when reading settings: ")
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
                 fle.close()
-
-            for setting in settings:
-                name = setting.getAttribute("id")
-                value = setting.getAttribute("value")
-
-                if value:
-                    self.currentSettings[name] = value
 
     def disableWriteOnSave(self):
         self.alwaysWrite = 0

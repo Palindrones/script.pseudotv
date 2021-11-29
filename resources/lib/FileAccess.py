@@ -19,7 +19,7 @@
 import xbmc
 import subprocess, os, shutil
 import time, threading
-import random, os
+import random, os, traceback
 import Globals
 import codecs
 import xbmcvfs
@@ -46,6 +46,7 @@ class FileAccess:
         try:
             return VFSFile(filename, mode)
         except UnicodeDecodeError:
+            FileAccess.log("Failed to open filename" + filename + " | " + traceback.format_exc())
             return FileAccess.open(ascii(filename), mode, encoding)
 
         return fle
@@ -178,7 +179,7 @@ class VFSFile:
 
 
     def write(self, data):
-        if isinstance(data, unicode):
+        if not isinstance(data, str):
             data = bytearray(data, "utf-8")
             data = bytes(data)
 

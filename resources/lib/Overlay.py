@@ -191,7 +191,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.Error(LANGUAGE(30037))
                 return
         except Exception as e:
-            self.Error(LANGUAGE(30038), str(e))
+            # self.Error(LANGUAGE(30038), str(e))
+            self.Error(LANGUAGE(30038) + traceback.format_exc())
             return
 
         found = False
@@ -202,7 +203,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 break
 
         if found == False:
-            self.Error(LANGUAGE(30038))
+            self.Error(LANGUAGE(30038) + 'wasnt found')
             return
 
         if self.sleepTimeValue > 0:
@@ -282,7 +283,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def Error(self, line1, line2 = '', line3 = ''):
         self.log('FATAL ERROR: ' + line1 + " " + line2 + " " + line3, xbmc.LOGFATAL)
         dlg = xbmcgui.Dialog()
-        dlg.ok(xbmc.getLocalizedString(257), line1, line2, line3)
+        dlg.ok(xbmc.getLocalizedString(257), line1)
+        #TODO: the line2 and line3 options here aren't used in Dialog anymore, so its just header and message. Fix this
+        #dlg.ok(xbmc.getLocalizedString(257), line1, line2, line3)
         del dlg
         self.end()
 
@@ -699,7 +702,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         self.startSleepTimer()
 
+        self.log('ACTION: ' + str(action), xbmc.LOGFATAL)
         if action == ACTION_SELECT_ITEM:
+            self.log('The action is ACTION_SELECT_ITEM', xbmc.LOGFATAL)
             # If we're manually typing the channel, set it now
             if self.inputChannel > 0:
                 if self.inputChannel != self.currentChannel and self.inputChannel <= self.maxChannels:
@@ -734,6 +739,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
                 self.startNotificationTimer()
 
+                self.log('Current new channel value: ' + str(self.newChannel), xbmc.LOGFATAL)
                 if self.newChannel != 0:
                     self.setChannel(self.newChannel)
 

@@ -26,7 +26,10 @@ ADDON = xbmcaddon.Addon(id='script.pseudotv')
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_NAME = ADDON.getAddonInfo('name')
 LANGUAGE = ADDON.getLocalizedString
-CWD = ADDON.getAddonInfo('path').decode("utf-8")
+
+CWD = ADDON.getAddonInfo('path')
+#TODO: decode isn't valid anymore
+#CWD = ADDON.getAddonInfo('path').decode("utf-8")
 VERSION = ADDON.getAddonInfo('version')
 ICON = ADDON.getAddonInfo('icon')
 
@@ -38,16 +41,14 @@ def log(msg, level = xbmc.LOGDEBUG):
 
 
 def uni(string, encoding = 'utf-8'):
-    if isinstance(string, basestring):
-        if not isinstance(string, unicode):
-           string = unicode(string, encoding)
+    if not isinstance(string, str):
+        string = str(string, encoding)
 
     return string
 
 def ascii(string):
-    if isinstance(string, basestring):
-        if isinstance(string, unicode):
-           string = string.encode('ascii', 'ignore')
+    if not isinstance(string, str):
+        string = string.encode('ascii', 'ignore')
 
     return string
 
@@ -65,7 +66,9 @@ MODE_RANDOM = 8
 MODE_REALTIME = 16
 MODE_STARTMODES = MODE_RANDOM | MODE_REALTIME | MODE_RESUME
 
-SETTINGS_LOC = ADDON.getAddonInfo('profile').decode("utf-8")
+SETTINGS_LOC = ADDON.getAddonInfo('profile')
+# TODO: CHange from how it was before because decode isn't valid anymore
+#SETTINGS_LOC = ADDON.getAddonInfo('profile').decode("utf-8")
 CHANNEL_SHARING = False
 LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache' + '/'))
 

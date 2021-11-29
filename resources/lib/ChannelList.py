@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
+import importlib
+import subprocess, os, traceback
 import time, threading
 import datetime
 import sys, re
@@ -25,8 +26,8 @@ import random
 import json
 from heapq import nlargest
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+importlib.reload(sys)
+#sys.setdefaultencoding('utf-8')
 
 from xml.dom.minidom import parse, parseString
 
@@ -98,7 +99,9 @@ class ChannelList:
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
             self.updateDialogProgress = i * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(i + 1)), LANGUAGE(30165))
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(i + 1)))
+            # TODO: do we need this? this has a special message in it (30165) but the new version of update doesn't have access to that
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(i + 1)), LANGUAGE(30165))
             self.channels.append(Channel())
 
             # If the user pressed cancel, stop everything and exit
@@ -118,7 +121,9 @@ class ChannelList:
         if foundvalid == False and makenewlists == False:
             for i in range(self.maxChannels):
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(i + 1)), LANGUAGE(30165), '')
+                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(i + 1)))
+                # TODO: same as above
+                #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(i + 1)), LANGUAGE(30165), '')
                 self.setupChannel(i + 1, False, True, False)
 
                 if self.channels[i].isValid:
@@ -161,8 +166,8 @@ class ChannelList:
 
 
     def sendJSON(self, command):
-        data = xbmc.executeJSONRPC(command)
-        return unicode(data, 'utf-8', errors='ignore')
+        return xbmc.executeJSONRPC(command)
+        #return str(data, 'utf-8', errors='ignore')
 
 
     def setupChannel(self, channel, background = False, makenewlist = False, append = False):
@@ -213,7 +218,9 @@ class ChannelList:
                 createlist = True
 
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30171), '')
+                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)))
+                    # TODO: same as above
+                    #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30171), '')
 
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
@@ -274,7 +281,9 @@ class ChannelList:
         if ((createlist or needsreset) and makenewlist) or append:
             if self.background == False:
                 self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(channel)), LANGUAGE(30172), '')
+                self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(channel)))
+                # tODO: same as above
+                #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(channel)), LANGUAGE(30172), '')
 
             if self.makeChannelList(channel, chtype, chsetting1, chsetting2, append) == True:
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') == True:
@@ -296,7 +305,9 @@ class ChannelList:
         # Don't clear history when appending channels
         if self.background == False and append == False and self.myOverlay.isMaster:
             self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30173), '')
+            #TODO: same as above
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)), LANGUAGE(30173), '')
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30166)) % (str(channel)))
             self.clearPlaylistHistory(channel)
 
         if append == False:
@@ -613,7 +624,7 @@ class ChannelList:
 
 
     def createNetworkPlaylist(self, network):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Network_' + network + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Network_' + network + '.xsp')
         network =  self.cleanString(network)
 
         try:
@@ -641,7 +652,7 @@ class ChannelList:
         except:
             pass
 
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + uni(show) + '_' + order + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + uni(show) + '_' + order + '.xsp')
         show = self.cleanString(show)
 
         try:
@@ -659,7 +670,7 @@ class ChannelList:
 
 
     def createGenreMixedPlaylist(self, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Mixed_' + genre + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Mixed_' + genre + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -679,7 +690,7 @@ class ChannelList:
 
 
     def createGenrePlaylist(self, pltype, chtype, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -701,7 +712,7 @@ class ChannelList:
 
 
     def createStudioPlaylist(self, studio):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Studio_' + studio + '.xsp')
+        flename = xbmcvfs.makeLegalFilename(GEN_CHAN_LOC + 'Studio_' + studio + '.xsp')
 
         try:
             fle = FileAccess.open(flename, "w")
@@ -726,7 +737,9 @@ class ChannelList:
             return [uni(os.path.join(dir, f)) for f in xbmcvfs.listdir(dir)[1]]
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30174))
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+            # TODO: same as above
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30174))
 
         file_detail = listdir_fullpath(setting1)
 
@@ -742,9 +755,11 @@ class ChannelList:
 
                 if self.background == False:
                     if filecount == 1:
-                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
+                        #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
+                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
                     else:
-                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
+                        #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
+                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
 
                 afile = os.path.basename(f)
                 afile, ext = os.path.splitext(afile)
@@ -790,7 +805,9 @@ class ChannelList:
         json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetTVShows", "params": {"properties":["studio", "genre","runtime"]}, "id": 1}'
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30177))
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+            # TODO: same as above
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30177))
 
         json_folder_detail = self.sendJSON(json_query)
         jsonObject = json.loads(json_folder_detail)
@@ -829,7 +846,7 @@ class ChannelList:
                     else:
                         self.showGenreList.append([curgenre, 1]) # add to list (include the count/ doesnt affect if the sortbycount is on or off)
             except Exception as e:
-                self.log("json Internal.except:" + str(e))                                        
+                self.log("json Internal.except:" + traceback.format_exc())                                        
 
         if sortbycount:
             self.networkList.sort(key=lambda x: x[1], reverse = True)
@@ -853,7 +870,9 @@ class ChannelList:
         json_folder_detail = self.sendJSON(json_query)
         jsonObject = json.loads(json_folder_detail)
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30178))
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+            # TODO: same as above
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30178))
 
         for f in jsonObject["result"]["movies"]:
             try:
@@ -886,7 +905,7 @@ class ChannelList:
                     else:
                         self.movieGenreList.append([curgenre, 1])# add to list (include the count/ doesnt affect if the sortbycount is on or off)
             except Exception as e:
-                self.log("json Internal.except:" + str(e))                                        
+                self.log("json Internal.except:" + traceback.format_exc())                                        
 
         #sorting studio
         maxcount = max(studioList,key=lambda item:item[1])[1]        
@@ -930,7 +949,8 @@ class ChannelList:
         json_query = '{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "video", "properties":["duration","runtime","showtitle","plot","plotoutline","season","episode","year","lastplayed","playcount","resume"]}, "id": 1}' % (self.escapeDirJSON(dir_name))
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30179))
+            self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+            #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), LANGUAGE(30179))
 
         json_folder_detail = self.sendJSON(json_query)
         jsonResult = json_folder_detail
@@ -983,9 +1003,11 @@ class ChannelList:
                                 #udpate status dialog
                                 if self.background == False:
                                     if filecount == 1:
-                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
+                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+                                        #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30175)) % (str(filecount)))
                                     else:
-                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
+                                        self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+                                        #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), LANGUAGE(30172), ''.join(LANGUAGE(30176)) % (str(filecount)))
 
                                 theplot = plotoutline if len(plotoutline) > 0 else ( plot if len(plot) > 0 else LANGUAGE(30023))
                                 theplot = theplot.replace('//','')
@@ -1032,12 +1054,12 @@ class ChannelList:
                                 #print(tmpstr)                
 
                         except Exception as e:
-                            self.log("json Internal.except:" + str(e))                                        
+                            self.log("json Internal.except:" + traceback.format_exc())                                        
 
                 else:
                     continue
         except Exception as e:
-            self.log("json Object Exception:" + str(e))                
+            self.log("json Object Exception:" + traceback.format_exc())                
 
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
@@ -1065,8 +1087,10 @@ class ChannelList:
 
         try:
             rules = dom1.getElementsByTagName('rule')
+            #TODO: what does this do?
             order = dom1.getElementsByTagName('order')
         except:
+            #TODO: this is lined for filename
             self.log('buildMixedFileList Problem parsing playlist ' + filename, xbmc.LOGERROR)
             xml.close()
             return fileList
@@ -1096,7 +1120,8 @@ class ChannelList:
                 self.runningActionId = index
 
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), ''.join(LANGUAGE(30180)) % (str(index + 1)), '')
+                    self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)))
+                    #self.updateDialog.update(self.updateDialogProgress, ''.join(LANGUAGE(30168)) % (str(self.settingChannel)), ''.join(LANGUAGE(30180)) % (str(index + 1)), '')
 
                 parameter = rule.runAction(action, self, parameter)
 
