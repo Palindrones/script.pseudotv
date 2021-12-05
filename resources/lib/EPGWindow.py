@@ -27,7 +27,6 @@ from Channel import Channel
 from FileAccess import FileAccess
 
 
-
 class EPGWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.focusRow = 0
@@ -45,7 +44,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.textcolor = "FFFFFFFF"
         self.focusedcolor = "FF7d7d7d"
         self.clockMode = 0
-        self.textfont  = "font13"
+        self.textfont = "font13"
 
         # Set media path.
         if os.path.exists(xbmc.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media'))):
@@ -132,6 +131,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             baseh = self.getControl(113).getHeight()
             basew = self.getControl(113).getWidth()
 
+            self.log('curtime: ' + str(curtime))
             # set the button that corresponds to the currently playing show
             for i in range(len(self.channelButtons[2])):
                 left, top = self.channelButtons[2][i].getPosition()
@@ -139,8 +139,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 left = left - basex
                 starttime = self.shownTime + (left / (basew / 5400.0))
                 endtime = starttime + (width / (basew / 5400.0))
+                self.log('starttime: ' + str(starttime) + ' | endtime: ' + str(endtime))
 
                 if curtime >= starttime and curtime <= endtime:
+                    self.log('setting focus time to : ' + str(int(time.time())))
                     self.focusIndex = i
                     self.setFocus(self.channelButtons[2][i])
                     self.focusTime = int(time.time())
@@ -385,7 +387,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
 
-        if self.actionSemaphore.acquire(False) == False:
+        if self.actionSemaphore.acquire(False) is False:
             self.log('Unable to get semaphore')
             return
 
@@ -443,12 +445,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def onControl(self, control):
         self.log('onControl')
 
-
     # Run when a show is selected, so close the epg and run the show
     def onClick(self, controlid):
         self.log('onClick')
 
-        if self.actionSemaphore.acquire(False) == False:
+        if self.actionSemaphore.acquire(False) is False:
             self.log('Unable to get semaphore')
             self.log('Unable to get semaphore', xbmc.LOGFATAL)
             return
@@ -459,27 +460,25 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             try:
                 selectedbutton = self.getControl(controlid)
             except:
-                self.actionSemaphore.release()
                 self.log('onClick unknown controlid ' + str(controlid), xbmc.LOGFATAL)
+                self.actionSemaphore.release()
                 return
 
-            self.log('Got a selected button with the controlid: ' + str(controlid) + ' rowCount: ' + str(self.rowCount), xbmc.LOGFATAL)
             for i in range(self.rowCount):
                 for x in range(len(self.channelButtons[i])):
-                    self.log('Looping through rows and channelbuttons', xbmc.LOGFATAL)
                     mycontrol = 0
                     mycontrol = self.channelButtons[i][x]
 
-                    self.log('Looping through rows and channelbuttons, about to check selected vs mycontrol', xbmc.LOGFATAL)
-                    if selectedbutton == mycontrol:
-                        self.log('THe values are equal for selected button and mycontrol', xbmc.LOGFATAL)
+                    # Not sure why but in Kodi 19 you can't just compare the button to another button so i'm comparing
+                    # id's instead
+                    if selectedbutton.getId() == mycontrol.getId():
+                        self.log('The values are equal for selected button and mycontrol')
                         self.focusRow = i
                         self.focusIndex = x
                         self.selectShow()
                         self.closeEPG()
                         self.lastActionTime = time.time()
                         self.actionSemaphore.release()
-                        self.log('onClick found button return', xbmc.LOGFATAL)
                         return
 
             self.lastActionTime = time.time()
@@ -682,7 +681,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     # using the currently selected button, play the proper shows
     def selectShow(self):
         self.log('selectShow')
-        self.log('selecting a show', xbmc.LOGFATAL)
         basex, basey = self.getControl(111 + self.focusRow).getPosition()
         baseh = self.getControl(111 + self.focusRow).getHeight()
         basew = self.getControl(111 + self.focusRow).getWidth()
@@ -693,7 +691,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         starttime = self.shownTime + (left / (basew / 5400.0))
         chnoffset = self.focusRow - 2
         newchan = self.centerChannel
-        self.log('selectShow: New channel: ' + str(newchan), xbmc.LOGFATAL)
 
         while chnoffset != 0:
             if chnoffset > 0:

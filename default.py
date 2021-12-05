@@ -25,7 +25,7 @@ import os
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 CWD = ADDON.getAddonInfo('path')
-RESOURCE = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8"))
+RESOURCE = xbmc.translatePath(os.path.join(CWD, 'resources', 'lib'))
 
 sys.path.append(RESOURCE)
 
@@ -52,10 +52,11 @@ def Start():
     del MyOverlayWindow
     xbmcgui.Window(10000).setProperty("PseudoTVRunning", '')
 
+
 if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
     xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
     shouldrestart = False
-    if shouldrestart == False:
+    if shouldrestart is False:
         Start()
 else:
     xbmc.log('script.PseudoTV - Already running, exiting', xbmc.LOGERROR)

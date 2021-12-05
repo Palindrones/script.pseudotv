@@ -14,7 +14,7 @@
 
 import xbmc, xbmcgui, xbmcaddon
 import subprocess, os
-import time, threading
+import time, threading, traceback
 import datetime
 import sys, re
 import random
@@ -80,8 +80,8 @@ class ResetWatched:
         del self.itemlist[:]
 
     def sendJSON(self, command):
-        data = xbmc.executeJSONRPC(command)
-        return str(data, 'utf-8', errors='ignore')
+        return xbmc.executeJSONRPC(command)
+        # return str(data, 'utf-8', errors='ignore')
 
     def load(self, filename):
         self.log("Reset " + filename)
