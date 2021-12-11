@@ -677,7 +677,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.getControl(503).setImage(IMAGES_LOC + 'Default.png')
         self.log('setShowInfo return')
 
-
     # using the currently selected button, play the proper shows
     def selectShow(self):
         self.log('selectShow')
@@ -756,6 +755,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             # normalize reftime to the beginning of the video
             reftime -= videotime
 
+            self.log('reftime before updates: ' + str(reftime))
             while reftime > starttime:
                 playlistpos -= 1
                 reftime -= self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
@@ -764,6 +764,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 reftime += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
                 playlistpos += 1
 
-            self.log('determinePlaylistPosAtTime return' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
+            self.log('determinePlaylistPosAtTime: reftime after loops: ' + str(reftime) +
+                     ' | return ' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
             return self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)
 

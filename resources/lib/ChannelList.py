@@ -891,6 +891,7 @@ class ChannelList:
                 for studio in studios:
                     curstudio = studio.replace(" ", "-")
                     studiokinList = next((x for x in studioList if x[0] == curstudio ),None)
+                    self.log("current studio: " + curstudio)
 
                     if studiokinList != None:
                         studiokinList[1] += 1                   # increase Count by one
@@ -909,10 +910,13 @@ class ChannelList:
             except Exception as e:
                 self.log("json Internal.except:" + traceback.format_exc())
 
+        self.log("studioList size before updates: " + str(len(studioList)))
         #sorting studio
         maxcount = max(studioList, key=lambda item: item[1], default=0)[1]
         studioList = nlargest(int(maxcount / 3), studioList, key=lambda e:e[1])
             #trim to  all the lowest equal count items
+        self.log("studioList size after nLargest: " + str(len(studioList)) + " | maxCount value: " + str(maxcount))
+
         bestmatch = studioList[int(maxcount / 4)][1]
         self.studioList = [x for x in studioList if  x[1] >= bestmatch]
 
