@@ -1,3 +1,11 @@
+2.5.1 (Palindrones)
+    Added Option to Set Adult Content Channel (Rule) and enable/disable Adult Content Channels in Settings
+    Fixed Channel Configuration bugs (Matrix)
+
+2.4.6 (Palindrones)
+ Working Matrix version
+ Performance improvements
+
 2.4.5 (steveb)
     Hebrew translation. Thanks 'Eng2Heb'
     Added year for movie info.

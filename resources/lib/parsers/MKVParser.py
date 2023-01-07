@@ -1,56 +1,46 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2020 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import os, struct
-import traceback
-
-from Globals import ascii
-from FileAccess import FileAccess
-
-
+from Globals    import *
 
 class MKVParser:
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('script.pseudotv-MKVParser: ' + ascii(msg), level)
-
-
     def determineLength(self, filename):
-        self.log("determineLength " + filename)
+        log("MKVParser: determineLength " + filename)
 
         try:
+            # self.File = xbmcvfs.File(filename, "r")
             self.File = FileAccess.open(filename, "rb", None)
         except:
-            self.log("Unable to open the file")
-            self.log(traceback.format_exc(), xbmc.LOGERROR)
+            log("MKVParser: Unable to open the file")
+            log(traceback.format_exc(), xbmc.LOGERROR)
             return
 
         size = self.findHeader()
 
         if size == 0:
-            self.log('Unable to find the segment info')
+            log('MKVParser: Unable to find the segment info')
             dur = 0
         else:
-            dur = self.parseHeader(size)
+            dur = int(round(self.parseHeader(size)))
 
-        self.log("Duration is " + str(dur))
+        log("MKVParser: Duration is " + str(dur))
         return dur
-
+        
 
     def parseHeader(self, size):
         duration = 0
@@ -73,7 +63,8 @@ class MKVParser:
                     timecode = 0
 
                 if duration != 0 and timecode != 0:
-                        break
+                    break
+                    
             elif data == 0x4489:
                 try:
                     if datasize == 4:
@@ -81,7 +72,7 @@ class MKVParser:
                     else:
                         duration = int(struct.unpack('>d', self.getData(datasize))[0])
                 except:
-                    self.log("Error getting duration in header, size is " + str(datasize))
+                    log("MKVParser: Error getting duration in header, size is " + str(datasize))
                     duration = 0
 
                 if timecode != 0 and duration != 0:
@@ -90,7 +81,7 @@ class MKVParser:
                 try:
                     self.File.seek(datasize, 1)
                 except:
-                    self.log('Error while seeking')
+                    log('MKVParser: Error while seeking')
                     return 0
 
         if duration > 0 and timecode > 0:
@@ -101,26 +92,25 @@ class MKVParser:
 
 
     def findHeader(self):
-        self.log("findHeader")
+        log("MKVParser: findHeader")
         filesize = self.getFileSize()
-
         if filesize == 0:
-            self.log("Empty file")
+            log("MKVParser: Empty file")
             return 0
 
         data = self.getEBMLId()
 
         # Check for 1A 45 DF A3
         if data != 0x1A45DFA3:
-            self.log("Not a proper MKV")
+            log("MKVParser: Not a proper MKV")
             return 0
 
         datasize = self.getDataSize()
-
+        
         try:
             self.File.seek(datasize, 1)
         except:
-            self.log('Error while seeking')
+            log('MKVParser: Error while seeking')
             return 0
 
         data = self.getEBMLId()
@@ -132,7 +122,7 @@ class MKVParser:
             try:
                 self.File.seek(datasize, 1)
             except:
-                self.log('Error while seeking')
+                log('MKVParser: Error while seeking')
                 return 0
 
             data = self.getEBMLId()
@@ -147,7 +137,7 @@ class MKVParser:
             try:
                 self.File.seek(datasize, 1)
             except:
-                self.log('Error while seeking')
+                log('MKVParser: Error while seeking')
                 return 0
 
             data = self.getEBMLId()
@@ -162,7 +152,6 @@ class MKVParser:
 
     def getFileSize(self):
         size = 0
-
         try:
             pos = self.File.tell()
             self.File.seek(0, 2)
@@ -170,33 +159,32 @@ class MKVParser:
             self.File.seek(pos, 0)
         except:
             pass
-
         return size
 
 
     def getData(self, datasize):
-        data = self.File.read(datasize)
+        data = self.File.readBytes(datasize)
         return data
 
 
     def getDataSize(self):
-        data = self.File.read(1)
+        data = self.File.readBytes(1)
 
         try:
             firstbyte = struct.unpack('>B', data)[0]
             datasize = firstbyte
             mask = 0xFFFF
-
+    
             for i in range(8):
                 if datasize >> (7 - i) == 1:
                     mask = mask ^ (1 << (7 - i))
                     break
 
             datasize = datasize & mask
-
+    
             if firstbyte >> 7 != 1:
                 for i in range(1, 8):
-                    datasize = (datasize << 8) + struct.unpack('>B', self.File.read(1))[0]
+                    datasize = (datasize << 8) + struct.unpack('>B', self.File.readBytes(1))[0]
 
                     if firstbyte >> (7 - i) == 1:
                         break
@@ -207,19 +195,17 @@ class MKVParser:
 
 
     def getEBMLId(self):
-        data = self.File.read(1)
-
+        data = self.File.readBytes(1)
         try:
             firstbyte = struct.unpack('>B', data)[0]
             ID = firstbyte
 
             if firstbyte >> 7 != 1:
                 for i in range(1, 4):
-                    ID = (ID << 8) + struct.unpack('>B', self.File.read(1))[0]
+                    ID = (ID << 8) + struct.unpack('>B', self.File.readBytes(1))[0]
 
                     if firstbyte >> (7 - i) == 1:
                         break
         except:
             ID = 0
-
         return ID

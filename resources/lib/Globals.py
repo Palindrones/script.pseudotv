@@ -16,14 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import os, sys, re, struct, shutil, traceback, pathlib
+
 import xbmcaddon
 import xbmc
 import xbmcgui
 import xbmcvfs
 import Settings
 
-from FileAccess import FileLock
+from FileAccess import FileLock , FileAccess
 
 ADDON = xbmcaddon.Addon(id='script.pseudotv')
 ADDON_ID = ADDON.getAddonInfo('id')
@@ -40,10 +41,16 @@ def log(msg, level = xbmc.LOGDEBUG):
         pass
 
 
-def uni(string, encoding = 'utf-8'): 
+def uni(string, encoding = 'utf-8'):
+    if not isinstance(string, str):
+        string = str(string, encoding)
+
     return string
 
-def ascii(string): 
+def ascii(string):
+    if not isinstance(string, str):
+        string = string.encode('ascii', 'ignore')
+
     return string
 
 

@@ -38,6 +38,8 @@ class Channel:
         self.ruleList = []
         self.channelNumber = 0
         self.isSetup = False
+        self.isSkipped = False
+        
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
@@ -58,16 +60,13 @@ class Channel:
 
             for i in range(rulecount):
                 ruleid = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_id'))
+                rule = listrules.getRuleById(ruleid)
+                if rule:
+                    self.ruleList.append(rule.copy())
+                    for x in range(rule.getOptionCount()):
+                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
 
-                for rule in listrules.ruleList:
-                    if rule.getId() == ruleid:
-                        self.ruleList.append(rule.copy())
-
-                        for x in range(rule.getOptionCount()):
-                            self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
-
-                        self.log("Added rule - " + self.ruleList[-1].getTitle())
-                        break
+                    self.log("Added rule - " + self.ruleList[-1].getTitle())
         except:
             self.ruleList = []
 

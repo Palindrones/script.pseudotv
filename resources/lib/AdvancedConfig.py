@@ -135,25 +135,25 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
         elif action == ACTION_MOVE_LEFT or action == ACTION_MOVE_RIGHT or action == ACTION_SELECT_ITEM or action == ACTION_SELECT_ITEM2:
             try:
                 if self.getFocusId() == 131:
-                    RuleOptions = ("None", "Best-Effort Channel Scheduling", "Channel Logo", "Don't Include a Show", "Don't Play This Channel", "Even Show Distribution", "Force Random Mode", "Force Real-Time Mode", "Force Resume Mode", "Interleave Another Channel", "Only Play Unwatched Items", "Only Play Watched Items", "Pause When Not Watching", "Play TV Shows In Order", "Set Channel Name", "Reset Every x Days")
-                    RuleChoice = xbmcgui.Dialog().select("Choose A Rule",RuleOptions)
-                    if RuleChoice != -1:
-                        self.setRule(RuleChoice)
+                    #create, sort and display ruleOptions to select
+                    RuleOptions =[(self.allRules.getRule(i).getName(),i)  for i in range(self.allRules.getRuleCount())]
+                    RuleOptions.sort()
+                    RuleOptions[0] = ('None', 0)                               #change base name '' to 'None'
+                    RuleOptionsList = [i[0] for i in RuleOptions]              #create/send a 'rule name' list only
+                    RuleChoiceIndex = xbmcgui.Dialog().select("Choose A Rule", RuleOptionsList)
+                    if RuleChoiceIndex != -1:
+                        self.setRule(RuleOptions[RuleChoiceIndex][1])          # correlate selected rule name with proper rule index 
             except:
-                pass
+                self.log("onAction - RuleOptions:" + traceback.format_exc(), xbmc.LOGERROR)
 
-    def setRule(self, RuleChoice):
+
+    def setRule(self, RuleChoiceIndex):
         self.log("setRule")
 
-        if self.selectedRuleIndex >= 0:
-            curid = self.ruleList[self.selectedRuleIndex].getId()
-
-            for i in range(self.allRules.getRuleCount()):
-                if self.allRules.getRule(i).getId() == curid:
-                    self.ruleList[self.selectedRuleIndex] = self.allRules.getRule(RuleChoice).copy()
-                    break
-
+        if self.selectedRuleIndex >= 0: 
+            self.ruleList[self.selectedRuleIndex] = self.allRules.getRule(RuleChoiceIndex).copy()
             self.setRuleControls(self.selectedRuleIndex - self.listOffset)
+
 
     def scrollOptionsUp(self):
         self.log("scrollOptionsUp")
@@ -348,7 +348,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
         strlen = len(self.getRuleName(self.selectedRuleIndex))
         spacesstr = ''
 
-        for i in range(20 - strlen / 2):
+        for i in range(20 - int(strlen / 2)):
             spacesstr += ' '
 
         self.getControl(131).setLabel('<<' + spacesstr + self.getRuleName(self.selectedRuleIndex) + spacesstr + '>>')

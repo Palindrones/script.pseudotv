@@ -586,16 +586,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
             for i in range(rulecount):
                 ruleid = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_id'))
-
-                for rule in self.myRules.allRules.ruleList:
-                    if rule.getId() == ruleid:
-                        self.ruleList.append(rule.copy())
-
-                        for x in range(rule.getOptionCount()):
-                            self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
-
-                        foundrule = True
-                        break
+                rule = self.myRules.allRules.getRuleById(ruleid)
+                if rule:
+                    self.ruleList.append(rule.copy())
+                    for x in range(rule.getOptionCount()):
+                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
+                    foundrule = True
         except:
             self.ruleList = []
 

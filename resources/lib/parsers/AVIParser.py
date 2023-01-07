@@ -1,28 +1,22 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2020 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import os, struct
-
-from Globals import ascii
-from FileAccess import FileAccess
-
-
+from Globals    import *
 
 class AVIChunk:
     def __init__(self):
@@ -37,20 +31,15 @@ class AVIChunk:
 
 
     def read(self, thefile):
-        data = thefile.read(4)
-
-        try:
-            self.size = struct.unpack('<i', data)[0]
-        except:
-            self.size = 0
-
+        data = thefile.readBytes(4)
+        try:    self.size = struct.unpack('<i', data)[0]
+        except: self.size = 0
         # Putting an upper limit on the chunk size, in case the file is corrupt
-        if self.size > 0 and self.size < 10000:
-            self.chunk = thefile.read(self.size)
+        if self.size > 0 and self.size < 10000: 
+            self.chunk = thefile.readBytes(self.size)
         else:
             self.chunk = ''
             self.size = 0
-
 
 
 class AVIList:
@@ -65,15 +54,11 @@ class AVIList:
 
 
     def read(self, thefile):
-        data = thefile.read(4)
-
-        try:
-            self.size = struct.unpack('<i', data)[0]
-        except:
-            self.size = 0
-
+        data = thefile.readBytes(4)
+        self.size = struct.unpack('<i', data)[0]
+        try:    self.size = struct.unpack('<i', data)[0]
+        except: self.size = 0
         self.fourcc = thefile.read(4)
-
 
 
 class AVIHeader:
@@ -124,49 +109,44 @@ class AVIParser:
         self.StreamHeader = AVIStreamHeader()
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('AVIParser: ' + ascii(msg), level)
-
-
     def determineLength(self, filename):
-        self.log("determineLength " + filename)
+        log("AVIParser: determineLength " + filename)
 
         try:
             self.File = FileAccess.open(filename, "rb", None)
         except:
-            self.log("Unable to open the file")
+            log("AVIParser: Unable to open the file")
             return 0
 
-        dur = self.readHeader()
+        dur = int(self.readHeader())
         self.File.close()
-        self.log('Duration: ' + str(dur))
+        log('AVIParser: Duration is ' + str(dur))
         return dur
 
 
     def readHeader(self):
         # AVI Chunk
         data = self.getChunkOrList()
-
+        
         if data.datatype != 2:
-            self.log("Not an avi")
+            log("AVIParser: Not an avi")
             return 0
-
+        #todo fix
         if data.fourcc[0:4] != "AVI ":
-            self.log("Wrong FourCC")
+            log("AVIParser: Wrong FourCC")
             return 0
 
         # Header List
         data = self.getChunkOrList()
-
         if data.fourcc != "hdrl":
-            self.log("Header not found")
+            log("AVIParser: Header not found")
             return 0
 
         # Header chunk
         data = self.getChunkOrList()
 
         if data.fourcc != 'avih':
-            self.log('Header chunk not found')
+            log('Header chunk not found')
             return 0
 
         self.parseHeader(data)
@@ -178,7 +158,7 @@ class AVIParser:
 
         for i in range(self.Header.dwStreams):
             if data.datatype != 2:
-                self.log("Unable to find streams")
+                log("AVIParser: Unable to find streams")
                 return 0
 
             listsize = data.size
@@ -186,7 +166,7 @@ class AVIParser:
             data = self.getChunkOrList()
 
             if data.datatype != 1:
-                self.log("Broken stream header")
+                log("AVIParser: Broken stream header")
                 return 0
 
             self.StreamHeader.empty()
@@ -204,9 +184,9 @@ class AVIParser:
 
                 data = self.getChunkOrList()
             except:
-                self.log("Unable to seek")
+                log("AVIParser: Unable to seek")
 
-        self.log("Video stream not found")
+        log("AVIParser: Video stream not found")
         return 0
 
 
@@ -232,13 +212,13 @@ class AVIParser:
             self.Header.dwHeight = header[9]
         except:
             self.Header.empty()
-            self.log('Unable to parse the header')
+            log("AVIParser: Unable to parse the header")
 
 
     def parseStreamHeader(self, data):
         try:
-            self.StreamHeader.fccType = data.chunk[0:4]
-            self.StreamHeader.fccHandler = data.chunk[4:8]
+            self.StreamHeader.fccType = data.chunk[0:4].decode('utf-8')
+            self.StreamHeader.fccHandler = data.chunk[4:8].decode('utf-8')
             header = struct.unpack('<ihhiiiiiiiid', data.chunk[8:])
             self.StreamHeader.dwFlags = header[0]
             self.StreamHeader.wPriority = header[1]
@@ -254,12 +234,13 @@ class AVIParser:
             self.StreamHeader.rcFrame = ''
         except:
             self.StreamHeader.empty()
-            self.log("Error reading stream header")
+            log("AVIParser: Error reading stream header")
 
 
     def getChunkOrList(self):
-        data = self.File.read(4)
-
+        try: data = self.File.readBytes(4).decode('utf-8')
+        except: data = self.File.read(4)
+        
         if data == "RIFF" or data == "LIST":
             dataclass = AVIList()
         elif len(data) == 0:

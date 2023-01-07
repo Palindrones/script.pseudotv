@@ -27,7 +27,6 @@ from Channel import Channel
 from FileAccess import FileAccess
 
 
-
 class EPGWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.focusRow = 0
@@ -45,7 +44,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.textcolor = "FFFFFFFF"
         self.focusedcolor = "FF7d7d7d"
         self.clockMode = 0
-        self.textfont  = "font13"
+        self.textfont = "font13"
 
         # Set media path.
         if os.path.exists(xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'skins', xbmc.getSkinDir(), 'media'))):
@@ -132,6 +131,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             baseh = self.getControl(113).getHeight()
             basew = self.getControl(113).getWidth()
 
+            self.log('curtime: ' + str(curtime))
             # set the button that corresponds to the currently playing show
             for i in range(len(self.channelButtons[2])):
                 left, top = self.channelButtons[2][i].getPosition()
@@ -139,8 +139,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 left = left - basex
                 starttime = self.shownTime + (left / (basew / 5400.0))
                 endtime = starttime + (width / (basew / 5400.0))
+                self.log('starttime: ' + str(starttime) + ' | endtime: ' + str(endtime))
 
                 if curtime >= starttime and curtime <= endtime:
+                    self.log('setting focus time to : ' + str(int(time.time())))
                     self.focusIndex = i
                     self.setFocus(self.channelButtons[2][i])
                     self.focusTime = int(time.time())
@@ -385,7 +387,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
 
-        if self.actionSemaphore.acquire(False) == False:
+        if self.actionSemaphore.acquire(False) is False:
             self.log('Unable to get semaphore')
             return
 
@@ -443,13 +445,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def onControl(self, control):
         self.log('onControl')
 
-
     # Run when a show is selected, so close the epg and run the show
     def onClick(self, controlid):
         self.log('onClick')
 
-        if self.actionSemaphore.acquire(False) == False:
+        if self.actionSemaphore.acquire(False) is False:
             self.log('Unable to get semaphore')
+            self.log('Unable to get semaphore', xbmc.LOGFATAL)
             return
 
         lastaction = time.time() - self.lastActionTime
@@ -461,13 +463,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     mycontrol = self.channelButtons[i][x].getId()
 
                     if controlid == mycontrol:
+                        self.log('The values are equal for selected button and mycontrol')
                         self.focusRow = i
                         self.focusIndex = x
                         self.selectShow()
                         self.closeEPG()
                         self.lastActionTime = time.time()
                         self.actionSemaphore.release()
-                        self.log('onClick found button return')
                         return
 
             self.log('onClick did not find button for :'+ str(controlid))
@@ -667,7 +669,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.getControl(503).setImage(IMAGES_LOC + 'Default.png')
         self.log('setShowInfo return')
 
-
     # using the currently selected button, play the proper shows
     def selectShow(self):
         self.log('selectShow')
@@ -746,6 +747,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             # normalize reftime to the beginning of the video
             reftime -= videotime
 
+            self.log('reftime before updates: ' + str(reftime))
             while reftime > starttime:
                 playlistpos -= 1
                 reftime -= self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
@@ -754,6 +756,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 reftime += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
                 playlistpos += 1
 
-            self.log('determinePlaylistPosAtTime return' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
+            self.log('determinePlaylistPosAtTime: reftime after loops: ' + str(reftime) +
+                     ' | return ' + str(self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)))
             return self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)
 

@@ -772,3 +772,11 @@ msgstr ""
 msgctxt "#30190"
 msgid "Reset Watched Status"
 msgstr ""
+
+msgctxt "#30191"
+msgid "Enable Adult Content"
+msgstr ""
+
+msgctxt "#30192"
+msgid "Adult Content Channel"
+msgstr ""

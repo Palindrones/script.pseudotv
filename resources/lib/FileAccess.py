@@ -18,6 +18,7 @@
 
 import xbmc
 import xbmcvfs
+import xbmcaddon
 
 import shutil
 import time
@@ -25,66 +26,86 @@ import subprocess
 import threading
 import random
 import os
+import traceback
 import Globals
 import codecs
-import xbmcvfs
-VFS_AVAILABLE = True
+VFS_AVAILABLE = True #####
 
-
+ADDON_ID      = 'script.pseudotv'
+REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
+ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
+ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+SETTINGS_LOC  = REAL_SETTINGS.getAddonInfo('profile')
 
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
-FILE_LOCK_NAME = "FileLock.dat"
+FILE_LOCK_NAME             = "FileLock.dat"
+DEFAULT_ENCODING           = "utf-8"
 
-
+def log(msg, level=xbmc.LOGDEBUG):
+    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return  ##############
+    if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
 class FileAccess:
     @staticmethod
-    def log(msg, level = xbmc.LOGDEBUG):
-        Globals.log('FileAccess: ' + msg, level)
-
-
-    @staticmethod
-    def open(filename, mode, encoding = "utf-8"):
+    def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
-        FileAccess.log("trying to open " + filename)
-
-        try:
-            return VFSFile(filename, mode)
-        except UnicodeDecodeError:
-            return FileAccess.open(ascii(filename), mode, encoding)
-
+        log("FileAccess: trying to open %s"%filename)
+        try: return VFSFile(filename, mode)
+        except UnicodeDecodeError: return FileAccess.open(filename, mode, encoding)
         return fle
 
 
     @staticmethod
+    def listdir(path):
+        return xbmcvfs.listdir(path)
+
+
+    @staticmethod
+    def translatePath(path):
+        return xbmcvfs.translatePath(path)
+
+
+    @staticmethod
     def copy(orgfilename, newfilename):
-        FileAccess.log('copying ' + orgfilename + ' to ' + newfilename)
-        xbmcvfs.copy(orgfilename, newfilename)
-        return True
+        log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
+        dir, file = os.path.split(newfilename)
+        if not FileAccess.exists(dir): FileAccess.makedirs(dir)
+        return xbmcvfs.copy(orgfilename, newfilename)
 
 
+    @staticmethod
+    def move(orgfilename, newfilename):
+        log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
+        if xbmcvfs.copy(orgfilename, newfilename):
+            return xbmcvfs.delete(orgfilename)
+        return False
+        
+
+    @staticmethod
+    def delete(filename):
+        return xbmcvfs.delete(filename)
+        
+        
     @staticmethod
     def exists(filename):
         try:
             return xbmcvfs.exists(filename)
         except UnicodeDecodeError:
-            return FileAccess.exists(ascii(filename))
-
+            return os.path.exists(xbmcvfs.translatePath(filename))
         return False
 
 
     @staticmethod
-    def openSMB(filename, mode, encoding = "utf-8"):
+    def openSMB(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
-
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
-
             try:
                 fle = codecs.open(newname, mode, encoding)
             except:
                 fle = 0
-
         return fle
 
 
@@ -93,55 +114,84 @@ class FileAccess:
         if os.name.lower() == 'nt':
             filename = '\\\\' + filename[6:]
             return FileAccess.exists(filename)
-
         return False
 
 
     @staticmethod
-    def rename(path, newpath):
-        FileAccess.log("rename " + path + " to " + newpath)
-
+    def rename(path, newpath):       
+        log("FileAccess: rename %s to %s"%(path,newpath))
+        if not FileAccess.exists(path):
+            return False
+        
         try:
             if xbmcvfs.rename(path, newpath):
                 return True
-        except:
-            pass
+        except Exception as e: 
+            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
+        try:
+            if FileAccess.move(path, newpath):
+                return True
+        except Exception as e: 
+            log("FileAccess: move, Failed! %s"%(e), xbmc.LOGERROR)
+           
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
-                FileAccess.log("Modifying name")
+                log("FileAccess: Modifying name")
                 if path[0:6].lower() == 'smb://':
                     path = '\\\\' + path[6:]
 
                 if newpath[0:6].lower() == 'smb://':
-                    newpath = '\\\\' + newpath[6:]
-
+                    newpath = '\\\\' + newpath[6:]        
+        
+        if not os.path.exist(xbmcvfs.translatePath(path)):
+            return False
+        
         try:
-            os.rename(path, newpath)
-            FileAccess.log("os.rename")
+            log("FileAccess: os.rename")
+            os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
-        except:
-            pass
-
+        except Exception as e: 
+            log("FileAccess: os.rename, Failed! %s"%(e), xbmc.LOGERROR)
+ 
         try:
-            shutil.move(path, newpath)
-            FileAccess.log("shutil.move")
+            log("FileAccess: shutil.move")
+            shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
-        except:
-            pass
+        except Exception as e: 
+            log("FileAccess: shutil.move, Failed! %s"%(e), xbmc.LOGERROR)
 
-        FileAccess.log("OSError")
+        log("FileAccess: OSError")
         raise OSError()
 
 
     @staticmethod
+    def removedirs(path, force=True):
+        if len(path) == 0: return False
+        elif(xbmcvfs.exists(path)):
+            return True
+        try: 
+            success = xbmcvfs.rmdir(dir, force=force)
+            if success: return True
+            else: raise
+        except: 
+            try: 
+                os.rmdir(xbmcvfs.translatePath(path))
+                if os.path.exists(xbmcvfs.translatePath(path)):
+                    return True
+            except: log("FileAccess: removedirs failed!")
+            return False
+            
+            
+    @staticmethod
     def makedirs(directory):
-        try:
-            os.makedirs(directory)
+        try:  
+            os.makedirs(xbmcvfs.translatePath(directory))
+            return os.path.exists(xbmcvfs.translatePath(directory))
         except:
-            FileAccess._makedirs(directory)
-
-
+            return FileAccess._makedirs(directory)
+            
+            
     @staticmethod
     def _makedirs(path):
         if len(path) == 0:
@@ -151,56 +201,53 @@ class FileAccess:
             return True
 
         success = xbmcvfs.mkdir(path)
-
         if success == False:
-            if path == os.path.dirname(path):
+            if path == os.path.dirname(xbmcvfs.translatePath(path)):
                 return False
 
-            if FileAccess._makedirs(os.path.dirname(path)):
+            if FileAccess._makedirs(os.path.dirname(xbmcvfs.translatePath(path))):
                 return xbmcvfs.mkdir(path)
-
         return xbmcvfs.exists(path)
-
 
 
 class VFSFile:
     def __init__(self, filename, mode):
-        Globals.log("VFSFile: trying to open " + filename)
-
+        log("VFSFile: trying to open %s"%filename)
         if mode == 'w':
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:
-            self.currentFile = xbmcvfs.File(filename)
-
-        Globals.log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
+            self.currentFile = xbmcvfs.File(filename, 'r')
+        log("VFSFile: Opening %s"%filename, xbmc.LOGDEBUG)
 
         if self.currentFile == None:
-            Globals.log("VFSFile: Couldnt open " + filename, xbmc.LOGERROR)
+            log("VFSFile: Couldnt open %s"%filename, xbmc.LOGERROR)
 
 
-    def read(self, bytes):
-        return self.currentFile.read(bytes)
-
+    def read(self, bytes=0):
+        try:    return self.currentFile.read(bytes)
+        except: return self.currentFile.readBytes(bytes)
+        
+        
+    def readBytes(self, bytes=0):
+        return self.currentFile.readBytes(bytes)
+        
 
     def write(self, data):
-        if isinstance(data, str):
-            data = bytearray(data, "utf-8")
-            data = bytes(data)
-
+        if isinstance(data,bytes):
+            data = data.decode(DEFAULT_ENCODING, 'backslashreplace')
         return self.currentFile.write(data)
-
-
+        
+        
     def close(self):
         return self.currentFile.close()
 
 
-    def seek(self, bytes, offset):
+    def seek(self, bytes, offset=1):
         return self.currentFile.seek(bytes, offset)
 
 
     def size(self):
-        loc = self.currentFile.size()
-        return loc
+        return self.currentFile.size()
 
 
     def readlines(self):
@@ -208,85 +255,89 @@ class VFSFile:
 
 
     def tell(self):
-        loc = self.currentFile.seek(0, 1)
-        return loc
-
-
-
+        try:    return self.currentFile.tell()
+        except: return self.currentFile.seek(0, 1)
+        
 
 class FileLock:
     def __init__(self):
-        random.seed()
-        FileAccess.makedirs(Globals.LOCK_LOC)
-        self.lockFileName = Globals.LOCK_LOC + FILE_LOCK_NAME
-        self.lockedList = []
-        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
-        self.refreshLocksTimer.name = "RefreshLocks"
-        self.refreshLocksTimer.start()
-        self.isExiting = False
+        random.seed()        
+        self.LOCK_LOC      = self.chkLOCK()
+        self.monitor       = xbmc.Monitor()
+        self.lockedList    = []
+        self.isExiting     = False
+        self.lockFileName  = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
         self.grabSemaphore = threading.BoundedSemaphore()
         self.listSemaphore = threading.BoundedSemaphore()
-        self.log("FileLock instance")
+        log("FileLock: instance")
+
+
+    def chkLOCK(self):
+        #LOCK_LOC = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
+        LOCK_LOC =Globals.LOCK_LOC
+        if not FileAccess.exists(LOCK_LOC):    
+            if FileAccess.makedirs(LOCK_LOC):
+                return LOCK_LOC
+            #legacy settings already has cache in path
+            #LOCK_LOC = os.path.join(SETTINGS_LOC,'cache')
+            #if not FileAccess.exists(LOCK_LOC):    
+            #    FileAccess.makedirs(LOCK_LOC)
+                
+        if not FileAccess.exists(FILE_LOCK_NAME):    
+            FileAccess.open(FILE_LOCK_NAME,'a').close()
+        return LOCK_LOC
 
 
     def close(self):
-        self.log("close")
+        log("FileLock: close")
         self.isExiting = True
-
-        if self.refreshLocksTimer.isAlive():
-            try:
+        try: 
+            if self.refreshLocksTimer.is_alive():   
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
-            except:
-                pass
-
+        except: pass
+        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
+        self.refreshLocksTimer.name = "RefreshLocks"
         for item in self.lockedList:
             self.unlockFile(item)
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        Globals.log('FileLock: ' + msg, level)
-
-
     def refreshLocks(self):
-        self.log("refreshLocks")
-
         for item in self.lockedList:
             if self.isExiting:
-                self.log("IsExiting")
+                log("FileLock: IsExiting")
                 return False
-
             self.lockFile(item, True)
-
+            
+        try: 
+            if self.refreshLocksTimer.is_alive():
+                self.refreshLocksTimer.cancel()
+                self.refreshLocksTimer.join()
+        except: pass
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
-
+        self.refreshLocksTimer.name = "RefreshLocks"
         if self.isExiting == False:
-            self.refreshLocksTimer.name = "RefreshLocks"
             self.refreshLocksTimer.start()
             return True
-
         return False
 
 
     def lockFile(self, filename, block = False):
-        self.log("lockFile " + filename)
-        curval = -1
+        log("FileLock: lockFile %s"%filename)
+        curval   = -1
         attempts = 0
-        fle = 0
+        fle      = 0
         filename = filename.lower()
-        locked = True
-        lines = []
+        locked   = True
+        lines    = []
 
-        while(locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while not self.monitor.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
-
             if curval > -1:
                 self.releaseLockFile()
                 self.grabSemaphore.release()
-                xbmc.sleep(1000)
 
             self.grabSemaphore.acquire()
-
             if self.grabLockFile() == False:
                 self.grabSemaphore.release()
                 return False
@@ -294,7 +345,7 @@ class FileLock:
             try:
                 fle = FileAccess.open(self.lockName, "r")
             except:
-                self.log("Unable to open the lock file")
+                log("FileLock: Unable to open the lock file")
                 self.releaseLockFile()
                 self.grabSemaphore.release()
                 return False
@@ -323,13 +374,13 @@ class FileLock:
                         if block == False:
                             self.releaseLockFile()
                             self.grabSemaphore.release()
-                            self.log("File is locked")
+                            log("FileLock: File is locked")
                             return False
 
                         curval = val
                         attempts = 0
 
-        self.log("File is unlocked")
+        log("FileLock: File is unlocked")
         self.writeLockEntry(lines, filename)
         self.releaseLockFile()
         existing = False
@@ -341,87 +392,75 @@ class FileLock:
 
         if existing == False:
             self.lockedList.append(filename)
-
-        self.grabSemaphore.release()
+            
+        try: self.grabSemaphore.release()
+        except: pass
         return True
 
 
     def grabLockFile(self):
-        self.log("grabLockFile")
-
         # Wait a maximum of 20 seconds to grab file-lock file.  This long
         # timeout should help prevent issues with an old cache.
         for i in range(40):
             # Cycle file names in case one of them is sitting around in the directory
-            self.lockName = Globals.LOCK_LOC + str(random.randint(1, 60000)) + ".lock"
-
+            self.lockName = os.path.join(self.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
             try:
                 FileAccess.rename(self.lockFileName, self.lockName)
                 fle = FileAccess.open(self.lockName, 'r')
                 fle.close()
                 return True
-            except:
-                xbmc.sleep(500)
+            except: 
+                self.monitor.waitForAbort(.5)
 
-        self.log("Creating lock file")
-
+        log("FileLock: Creating lock file")
         try:
             fle = FileAccess.open(self.lockName, 'w')
             fle.close()
         except:
-            self.log("Unable to create a lock file")
+            log("FileLock: Unable to create a lock file")
             return False
-
         return True
 
 
     def releaseLockFile(self):
-        self.log("releaseLockFile")
-
+        log("FileLock: releaseLockFile")
         # Move the file back to the original lock file name
         try:
             FileAccess.rename(self.lockName, self.lockFileName)
         except:
-            self.log("Unable to rename the file back to the original name")
+            log("FileLock: Unable to rename the file back to the original name")
             return False
-
         return True
 
 
     def writeLockEntry(self, lines, filename, addentry = True):
-        self.log("writeLockEntry")
+        log("FileLock: writeLockEntry")
         # Make sure the entry doesn't exist.  This should only be the case
         # when the attempts count times out
         self.removeLockEntry(lines, filename)
-
         if addentry:
             try:
-                lines.append(str(random.randint(1, 60000)) + "," + filename + "\n")
-            except:
-                return False
+                lines.append("%s,%s\n"%((random.randint(1, 60000)),filename))
+            except: return False
 
-        try:
+        try:    
             fle = FileAccess.open(self.lockName, 'w')
-        except:
-            self.log("Unable to open the lock file for writing")
+        except: 
+            log("FileLock: Unable to open the lock file for writing")
             return False
 
         flewrite = ''
-
         for line in lines:
             flewrite += line
 
-        try:
+        try:    
             fle.write(flewrite)
-        except:
-            self.log("Exception writing to the log file")
-
+        except: log("FileLock: Exception writing to the log file")
         fle.close()
 
 
     def findLockEntry(self, lines, filename):
-        self.log("findLockEntry")
-
+        log("FileLock: findLockEntry")
         # Read the file
         for line in lines:
             # Format is 'random value,filename'
@@ -440,93 +479,82 @@ class FileLock:
 
             # The lock already exists
             if flenme == filename:
-                self.log("entry exists, val is " + str(setval))
+                log("FileLock: entry exists, val is %s"%(setval))
                 return setval
-
         return -1
 
 
     def removeLockEntry(self, lines, filename):
-        self.log("removeLockEntry")
+        log("FileLock: removeLockEntry")
         realindex = 0
-
         for i in range(len(lines)):
             index = lines[realindex].find(filename)
-
             if index > -1:
                 del lines[realindex]
                 realindex -= 1
-
             realindex += 1
 
 
     def unlockFile(self, filename):
-        self.log("unlockFile " + filename)
-        filename = filename.lower()
-        found = False
+        log("FileLock: unlockFile %s"%filename)
         realindex = 0
+        found     = False
+        
         # First make sure we actually own the lock
         # Remove it from the list if we do
         self.listSemaphore.acquire()
-
         for i in range(len(self.lockedList)):
             if self.lockedList[realindex] == filename:
                 del self.lockedList[realindex]
                 found = True
                 realindex -= 1
-
             realindex += 1
 
         self.listSemaphore.release()
-
         if found == False:
-            self.log("Lock not found")
+            log("FileLock: Lock not found")
             return False
 
         self.grabSemaphore.acquire()
-
         if self.grabLockFile() == False:
             self.grabSemaphore.release()
             return False
 
         try:
-            fle = FileAccess.open(self.lockName, "r")
+            fle   = FileAccess.open(self.lockName, "r")
+            lines = fle.readlines()
+            fle.close()
         except:
-            self.log("Unable to open the lock file")
+            log("FileLock: Unable to open the lock file")
             self.releaseLockFile()
             self.grabSemaphore.release()
             return False
 
-        lines = fle.readlines()
-        fle.close()
-        self.writeLockEntry(lines, filename, False)
+        self.writeLockEntry(lines, filename.lower(), False)
         self.releaseLockFile()
         self.grabSemaphore.release()
         return True
 
 
     def isFileLocked(self, filename, block = False):
-        self.log("isFileLocked " + filename)
-        filename = filename.lower()
+        log("FileLock: isFileLocked %s"%filename)
         self.grabSemaphore.acquire()
-
         if self.grabLockFile() == False:
             self.grabSemaphore.release()
             return True
 
         try:
-            fle = FileAccess.open(self.lockName, "r")
+            fle   = FileAccess.open(self.lockName, "r")
+            lines = fle.readlines()
+            fle.close()
         except:
-            self.log("Unable to open the lock file")
+            log("FileLock: Unable to open the lock file")
             self.releaseLockFile()
             self.grabSemaphore.release()
             return True
 
-        lines = fle.readlines()
-        fle.close()
         retval = False
-
-        if self.findLockEntry(lines, filename) > -1:
+        if self.findLockEntry(lines, filename.lower()) > -1:
             retval = True
 
         self.releaseLockFile()

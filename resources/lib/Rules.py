@@ -30,7 +30,8 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self) -> object:
-        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(), ForceResume(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime()]
+        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(),
+                         ForceResume(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime(), FilterAdultContent()]
 
 
     def getRuleCount(self):
@@ -46,7 +47,17 @@ class RulesList:
 
         return self.ruleList[index]
 
-
+    def getRuleByName(self, name: str):
+        for i in range(self.getRuleCount()):
+            if self.ruleList[i].getName() == name:
+                return self.ruleList[i]
+        return None
+    
+    def getRuleById(self, Id: int):
+        for i in range(self.getRuleCount()):
+            if self.ruleList[i].getId() == Id:
+                return self.ruleList[i]
+        return None
 
 class BaseRule:
     def __init__(self):
@@ -550,7 +561,7 @@ class ScheduleChannelRule(BaseRule):
 
             for rule in channeldata.ruleList:
                 if rule.getId() == self.myId:
-                    rule.reverseStartingEpisode()
+                    rule.reverseStartingEpisode(channeldata)
                     rule.nextScheduledTime = 0
 
         if (actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED) and (self.hasRun == False):
@@ -559,7 +570,7 @@ class ScheduleChannelRule(BaseRule):
         return channeldata
 
 
-    def reverseStartingEpisode(self):
+    def reverseStartingEpisode(self, channeldata):
         self.log("reverseStartingEpisode")
         tmpdate = 0
 
@@ -1487,3 +1498,20 @@ class EvenShowsRule(BaseRule):
         return ''
 
 
+class FilterAdultContent(BaseRule):
+    def __init__(self):
+        self.name = LANGUAGE(30192)
+        self.optionLabels = []
+        self.optionValues = []
+        self.myId = 17
+        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
+
+    def copy(self):
+        return FilterAdultContent()
+
+    def runAction(self, actionid, channelList, channeldata):
+        if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED or actionid == RULES_ACTION_START:
+            if ADDON_SETTINGS.getSetting('AdultContent') == "false":
+                channeldata.isValid = False
+                channeldata.isSkipped = True
+        return channeldata
