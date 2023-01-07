@@ -1,28 +1,22 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2020 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import struct
-
-from Globals import ascii
-from FileAccess import FileAccess
-
-
+from Globals    import *
 
 class FLVTagHeader:
     def __init__(self):
@@ -34,15 +28,15 @@ class FLVTagHeader:
 
     def readHeader(self, thefile):
         try:
-            data = struct.unpack('B', thefile.read(1))[0]
+            data = struct.unpack('B', thefile.readBytes(1))[0]
             self.tagtype = (data & 0x1F)
-            self.datasize = struct.unpack('>H', thefile.read(2))[0]
-            data = struct.unpack('>B', thefile.read(1))[0]
+            self.datasize = struct.unpack('>H', thefile.readBytes(2))[0]
+            data = struct.unpack('>B', thefile.readBytes(1))[0]
             self.datasize = (self.datasize << 8) | data
-            self.timestamp = struct.unpack('>H', thefile.read(2))[0]
-            data = struct.unpack('>B', thefile.read(1))[0]
+            self.timestamp = struct.unpack('>H', thefile.readBytes(2))[0]
+            data = struct.unpack('>B', thefile.readBytes(1))[0]
             self.timestamp = (self.timestamp << 8) | data
-            self.timestampext = struct.unpack('>B', thefile.read(1))[0]
+            self.timestampext = struct.unpack('>B', thefile.readBytes(1))[0]
         except:
             self.tagtype = 0
             self.datasize = 0
@@ -52,34 +46,31 @@ class FLVTagHeader:
 
 
 class FLVParser:
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('FLVParser: ' + ascii(msg), level)
-
-
     def determineLength(self, filename):
-        self.log("determineLength " + filename)
+        log("FLVParser: determineLength " + filename)
 
         try:
+            # self.File = xbmcvfs.File(filename, "r")
             self.File = FileAccess.open(filename, "rb", None)
         except:
-            self.log("Unable to open the file")
+            log("FLVParser: Unable to open the file")
             return
 
         if self.verifyFLV() == False:
-            self.log("Not a valid FLV")
+            log("FLVParser: Not a valid FLV")
             self.File.close()
             return 0
 
         tagheader = self.findLastVideoTag()
 
         if tagheader is None:
-            self.log("Unable to find a video tag")
+            log("FLVParser: Unable to find a video tag")
             self.File.close()
             return 0
 
-        dur = self.getDurFromTag(tagheader)
+        dur = int(self.getDurFromTag(tagheader))
         self.File.close()
-        self.log("Duration: " + str(dur))
+        log("FLVParser: Duration is " + str(dur))
         return dur
 
 
@@ -92,13 +83,12 @@ class FLVParser:
         return True
 
 
-
     def findLastVideoTag(self):
         try:
             self.File.seek(0, 2)
             curloc = self.File.tell()
         except:
-            self.log("Exception seeking in findLastVideoTag")
+            log("FLVParser: Exception seeking in findLastVideoTag")
             return None
 
         # Go through a limited amount of the file before quiting
@@ -110,14 +100,14 @@ class FLVParser:
         while curloc > maximum:
             try:
                 self.File.seek(-4, 1)
-                data = int(struct.unpack('>I', self.File.read(4))[0])
+                data = int(struct.unpack('>I', self.File.readBytes(4))[0])
 
                 if data < 1:
-                    self.log('Invalid packet data')
+                    log('FLVParser: Invalid packet data')
                     return None
 
                 if curloc - data <= 0:
-                    self.log('No video packet found')
+                    log('FLVParser: No video packet found')
                     return None
 
                 self.File.seek(-4 - data, 1)
@@ -126,21 +116,21 @@ class FLVParser:
                 tag.readHeader(self.File)
 
                 if tag.datasize <= 0:
-                    self.log('Invalid packet header')
+                    log('FLVParser: Invalid packet header')
                     return None
 
                 if curloc - 8 <= 0:
-                    self.log('No video packet found')
+                    log('FLVParser: No video packet found')
                     return None
 
                 self.File.seek(-8, 1)
-                self.log("detected tag type " + str(tag.tagtype))
+                log("FLVParser: detected tag type " + str(tag.tagtype))
                 curloc = self.File.tell()
 
                 if tag.tagtype == 9:
                     return tag
             except:
-                self.log('Exception in findLastVideoTag')
+                log('FLVParser: Exception in findLastVideoTag')
                 return None
 
         return None

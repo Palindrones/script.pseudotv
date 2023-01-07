@@ -9,6 +9,7 @@
 		<setting id="ThreadMode" type="enum" label="30012" lvalues="30103|30104|30105" default="1" />
 		<setting id="ChannelSharing" type="bool" label="30015" default="false"/>
 		<setting id="SettingsFolder" subsetting="true" type="folder" source="auto" visible="eq(-1,true)" label="30013" default="" />
+		<setting id="AdultContent" type="bool" label="30191" default="false"/>
 	</category>
 
 	<category label="30020">

@@ -1,34 +1,28 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2020 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import os, struct
-
-from Globals import ascii
-from FileAccess import FileAccess
-
+from Globals    import *
 
 class MP4DataBlock:
     def __init__(self):
         self.size = -1
         self.boxtype = ''
         self.data = ''
-
 
 
 class MP4MovieHeader:
@@ -41,28 +35,24 @@ class MP4MovieHeader:
         self.duration = 0
 
 
-
 class MP4Parser:
     def __init__(self):
         self.MovieHeader = MP4MovieHeader()
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('MP4Parser: ' + ascii(msg), level)
-
-
     def determineLength(self, filename):
-        self.log("determineLength " + filename)
+        log("MP4Parser: determineLength " + filename)
 
         try:
+            # self.File = xbmcvfs.File(filename, "r")
             self.File = FileAccess.open(filename, "rb", None)
         except:
-            self.log("Unable to open the file")
+            log("MP4Parser: Unable to open the file")
             return
 
         dur = self.readHeader()
         self.File.close()
-        self.log("Duration: " + str(dur))
+        log("MP4Parser: Duration is " + str(dur))
         return dur
 
 
@@ -70,14 +60,14 @@ class MP4Parser:
         data = self.readBlock()
 
         if data.boxtype != 'ftyp':
-            self.log("No file block")
+            log("MP4Parser: No file block")
             return 0
 
         # Skip past the file header
         try:
             self.File.seek(data.size, 1)
         except:
-            self.log('Error while seeking')
+            log('MP4Parser: Error while seeking')
             return 0
 
         data = self.readBlock()
@@ -86,7 +76,7 @@ class MP4Parser:
             try:
                 self.File.seek(data.size, 1)
             except:
-                self.log('Error while seeking')
+                log('MP4Parser: Error while seeking')
                 return 0
 
             data = self.readBlock()
@@ -97,7 +87,7 @@ class MP4Parser:
             try:
                 self.File.seek(data.size, 1)
             except:
-                self.log('Error while seeking')
+                log('MP4Parser: Error while seeking')
                 return 0
 
             data = self.readBlock()
@@ -112,13 +102,13 @@ class MP4Parser:
 
     def readMovieHeader(self):
         try:
-            self.MovieHeader.version = struct.unpack('>b', self.File.read(1))[0]
+            self.MovieHeader.version = struct.unpack('>b', self.File.readBytes(1))[0]
             self.File.read(3)   #skip flags for now
-
+    
             if self.MovieHeader.version == 1:
-                data = struct.unpack('>QQIQQ', self.File.read(36))
+                data = struct.unpack('>QQIQQ', self.File.readBytes(36))
             else:
-                data = struct.unpack('>IIIII', self.File.read(20))
+                data = struct.unpack('>IIIII', self.File.readBytes(20))
 
             self.MovieHeader.created = data[0]
             self.MovieHeader.modified = data[1]
@@ -130,18 +120,18 @@ class MP4Parser:
 
     def readBlock(self):
         box = MP4DataBlock()
-
+        
         try:
-            data = self.File.read(4)
+            data = self.File.readBytes(4)
             box.size = struct.unpack('>I', data)[0]
             box.boxtype = self.File.read(4)
-
+    
             if box.size == 1:
-                box.size = struct.unpack('>q', self.File.read(8))[0]
+                box.size = struct.unpack('>q', self.File.readBytes(8))[0]
                 box.size -= 8
-
+    
             box.size -= 8
-
+    
             if box.boxtype == 'uuid':
                 box.boxtype = self.File.read(16)
                 box.size -= 16

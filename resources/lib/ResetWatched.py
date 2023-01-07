@@ -14,7 +14,7 @@
 
 import xbmc, xbmcgui, xbmcaddon
 import subprocess, os
-import time, threading
+import time, threading, traceback
 import datetime
 import sys, re
 import random
@@ -78,10 +78,6 @@ class ResetWatched:
 
     def clear(self):
         del self.itemlist[:]
-
-    def sendJSON(self, command):
-        data = xbmc.executeJSONRPC(command)
-        return str(data, 'utf-8', errors='ignore')
 
     def load(self, filename):
         self.log("Reset " + filename)
@@ -183,7 +179,7 @@ class ResetWatched:
 
                         json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetEpisodeDetails", "params": {"episodeid": %d, "properties": ["lastplayed","playcount","resume"]}, "id": 1}' % ID
 
-                        json_folder_detail = self.sendJSON(json_query)
+                        json_folder_detail = xbmc.executeJSONRPC(json_query)
 
                         #next two lines accounting for how JSON returns resume info; stripping it down to just get the position
                         json_folder_detail = json_folder_detail.replace('"resume":{', '')
@@ -213,7 +209,7 @@ class ResetWatched:
                         #movie
                         json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovieDetails", "params": {"movieid": %d, "properties": ["lastplayed","playcount","resume"]}, "id": 1}' % ID
 
-                        json_folder_detail = self.sendJSON(json_query)
+                        json_folder_detail = xbmc.executeJSONRPC(json_query)
 
                         #next two lines accounting for how JSON returns resume info; stripping it down to just get the position
                         json_folder_detail = json_folder_detail.replace('"resume":{', '')

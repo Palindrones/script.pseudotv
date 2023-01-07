@@ -1,27 +1,22 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2020 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import os, struct
-
-from Globals import ascii
-from FileAccess import FileAccess
-
+from Globals    import *
 
 class TSPacket:
     def __init__(self):
@@ -37,19 +32,15 @@ class TSParser:
     def __init__(self):
         pass
 
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('TSParser: ' + ascii(msg), level)
-
-
     def determineLength(self, filename):
-        self.log("determineLength " + filename)
+        log("TSParser: determineLength " + filename)
         self.pid = -1
 
         try:
+            # self.File = xbmcvfs.File(filename, "r")
             self.File = FileAccess.open(filename, "rb", None)
         except:
-            self.log("Unable to open the file")
+            log("TSParser: Unable to open the file")
             return
 
         self.filesize = self.getFileSize()
@@ -59,9 +50,9 @@ class TSParser:
             return 0
 
         start = self.getStartTime()
-        self.log('Start - ' + str(start))
+        log('TSParser: Start - ' + str(start))
         end = self.getEndTime()
-        self.log('End - ' + str(end))
+        log('TSParser: End - ' + str(end))
 
         if end > start:
             dur = int((end - start) / 90000)
@@ -69,12 +60,12 @@ class TSParser:
             dur = 0
 
         self.File.close()
-        self.log("Duration: " + str(dur))
+        log("TSParser: Duration is " + str(dur))
         return dur
-
+        
 
     def findPacketLength(self):
-        self.log('findPacketLength')
+        log('TSParser: findPacketLength')
         maxbytes = 600
         start = 0
         self.packetLength = 0
@@ -83,7 +74,7 @@ class TSParser:
             maxbytes -= 1
 
             try:
-                data = self.File.read(1)
+                data = self.File.readBytes(1)
                 data = struct.unpack('B', data)
 
                 if data[0] == 71:
@@ -95,11 +86,11 @@ class TSParser:
                         # A minimum of 188, so skip the rest
                         self.File.seek(187, 1)
             except:
-                self.log('Exception in findPacketLength')
+                log('TSParser: Exception in findPacketLength')
                 return
 
         if (start > 0) and (end > start):
-            self.log('Packet Length: ' + str(int(end - start)))
+            log('TSParser: Packet Length: ' + str(int(end - start)))
             return (end - start)
 
         return
@@ -107,7 +98,6 @@ class TSParser:
 
     def getFileSize(self):
         size = 0
-
         try:
             pos = self.File.tell()
             self.File.seek(0, 2)
@@ -123,7 +113,7 @@ class TSParser:
         # A reasonably high number of retries in case the PES starts in the middle
         # and is it's maximum length
         maxpackets = 12000
-        self.log('getStartTime')
+        log('TSParser: getStartTime')
 
         try:
             self.File.seek(0, 0)
@@ -142,14 +132,14 @@ class TSParser:
 
                 if ret > 0:
                     self.pid = packet.pid
-                    self.log('PID: ' + str(self.pid))
+                    log('TSParser: PID: ' + str(self.pid))
                     return ret
 
         return 0
 
 
     def getEndTime(self):
-        self.log('getEndTime')
+        log('TSParser: getEndTime')
         packetcount = int(self.filesize / self.packetLength)
 
         try:
@@ -164,29 +154,29 @@ class TSParser:
             maxpackets -= 1
 
             if packet == None:
-                self.log('getEndTime got a null packet')
+                log('TSParser: getEndTime got a null packet')
                 return 0
 
             if packet.errorbit == 0 and packet.pesstartbit == 1 and packet.pid == self.pid:
                 ret = self.getPTS(packet)
 
                 if ret > 0:
-                    self.log('getEndTime returning time')
+                    log('TSParser: getEndTime returning time')
                     return ret
             else:
                 try:
                     self.File.seek(-1 * (self.packetLength * 2), 1)
                 except:
-                    self.log('exception')
+                    log('TSParser: exception')
                     return 0
 
-        self.log('getEndTime no found end time')
+        log('TSParser: getEndTime no found end time')
         return 0
 
 
     def getPTS(self, packet):
         timestamp = 0
-        self.log('getPTS')
+        log('TSParser: getPTS')
 
         try:
             data = struct.unpack('19B', packet.pesdata[:19])
@@ -208,10 +198,10 @@ class TSParser:
                     timestamp = timestamp | (data[13 + offset] >> 1)
                     return timestamp
         except:
-            self.log('exception in getPTS')
+            log('TSParser: exception in getPTS')
             pass
 
-        self.log('getPTS returning 0')
+        log('TSParser: getPTS returning 0')
         return 0
 
 
@@ -220,7 +210,7 @@ class TSParser:
         pos = 0
 
         try:
-            data = self.File.read(4)
+            data = self.File.readBytes(4)
             pos = 4
             data = struct.unpack('4B', data)
 
@@ -237,11 +227,11 @@ class TSParser:
                     packet.pesstartbit = (data[1] >> 6) & 1
 
                     if packet.adaption > 1:
-                        data = self.File.read(1)
+                        data = self.File.readBytes(1)
                         length = struct.unpack('B', data)[0]
 
                         if length > 0:
-                            data = self.File.read(length)
+                            data = self.File.readBytes(length)
                         else:
                             length = 0
 
@@ -249,9 +239,9 @@ class TSParser:
 
                     if pos < 188:
                         # read the PES data
-                        packet.pesdata = self.File.read(self.packetLength - pos)
+                        packet.pesdata = self.File.readBytes(self.packetLength - pos)
         except:
-            self.log('readTSPacket exception')
+            log('TSParser: readTSPacket exception')
             return None
 
         return packet

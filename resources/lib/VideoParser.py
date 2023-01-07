@@ -1,64 +1,57 @@
-#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2021 Jason Anderson, Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc
-import os, platform
-import subprocess
-
-import MP4Parser as MP4Parser
-import AVIParser as AVIParser
-import MKVParser as MKVParser
-import FLVParser as FLVParser
-import TSParser  as TSParser
-
-from Globals import *
-from FileAccess import FileAccess
-
-
-
+from Globals    import *
+from parsers    import MP4Parser
+from parsers    import AVIParser
+from parsers    import MKVParser
+from parsers    import FLVParser
+from parsers    import TSParser
+from parsers    import NFOParser
+from parsers    import VFSParser
+ 
 class VideoParser:
     def __init__(self):
-        self.AVIExts = ['.avi']
-        self.MP4Exts = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
-        self.MKVExts = ['.mkv']
-        self.FLVExts = ['.flv']
-        self.TSExts  = ['.ts', '.m2ts']
+        self.AVIExts   = ['.avi']
+        self.MP4Exts   = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
+        self.MKVExts   = ['.mkv']
+        self.FLVExts   = ['.flv']
+        self.TSExts    = ['.ts', '.m2ts']
+        self.STRMExts  = ['.strm']
+        self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('VideoParser: ' + msg, level)
-
-
-    def getVideoLength(self, filename):
-        self.log("getVideoLength " + filename)
-
+    def getVideoLength(self, filename, fileItem={}, jsonRPC=None):
+        log("VideoParser: getVideoLength %s"%filename)
         if len(filename) == 0:
-            self.log("No file name specified")
+            log("VideoParser: getVideoLength, No file name specified")
             return 0
 
         if FileAccess.exists(filename) == False:
-            self.log("Unable to find the file")
+            log("VideoParser: getVideoLength, Unable to find the file")
             return 0
 
         base, ext = os.path.splitext(filename)
         ext = ext.lower()
-
-        if ext in self.AVIExts:
+        
+        if filename.startswith(tuple(self.VFSPaths)):
+            self.parser = VFSParser.VFSParser(fileItem, jsonRPC)
+        elif ext in self.AVIExts:
             self.parser = AVIParser.AVIParser()
         elif ext in self.MP4Exts:
             self.parser = MP4Parser.MP4Parser()
@@ -68,8 +61,16 @@ class VideoParser:
             self.parser = FLVParser.FLVParser()
         elif ext in self.TSExts:
             self.parser = TSParser.TSParser()
+        elif ext in self.STRMExts:
+            self.parser = NFOParser.NFOParser()
         else:
-            self.log("No parser found for extension " + ext)
+            log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
             return 0
-
-        return self.parser.determineLength(filename)
+            
+        duration = int(self.parser.determineLength(filename))
+        if duration == 0 and not filename.startswith(tuple(self.VFSPaths)):
+            log("VideoParser: getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
+            self.parser = NFOParser.NFOParser()
+            duration = int(self.parser.determineLength(filename))
+        log('VideoParser: getVideoLength, duration = %s'%(duration))
+        return duration

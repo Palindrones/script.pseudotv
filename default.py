@@ -26,7 +26,6 @@ import os
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 CWD = ADDON.getAddonInfo('path')
-#
 RESOURCE = xbmcvfs.translatePath(os.path.join(CWD, 'resources', 'lib').encode("utf-8")) 
 
 sys.path.append(RESOURCE)
@@ -48,6 +47,7 @@ if SkinID != 'skin.estuary':
 def Start():
     if xbmc.Player().isPlaying():
         xbmc.Player().stop()
+    #TODO: this is lined through for Overlay, is it just for xbmc to read?
     import Overlay as Overlay
     MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.TVOverlay.xml", CWD, "default")
     del MyOverlayWindow
@@ -56,7 +56,6 @@ def Start():
 if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
     xbmcgui.Window(10000).setProperty("PseudoTVRunning", "True")
     shouldrestart = False
-    if shouldrestart == False:
-        Start()
+    Start()
 else:
     xbmc.log('script.PseudoTV - Already running, exiting', xbmc.LOGERROR)
