@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional
 import xbmc, xbmcgui, xbmcaddon
 import subprocess, os
 import time, threading
@@ -27,18 +28,19 @@ from ChannelList import ChannelList
 from Channel import Channel
 from Globals import *
 
-
 class ChannelListThread(threading.Thread):
     def __init__(self):
+        from Overlay import TVOverlay
+
         threading.Thread.__init__(self)
-        self.myOverlay = None
+        self.myOverlay: Optional[TVOverlay] = None
         sys.setcheckinterval(25)
         self.chanlist = ChannelList()
         self.paused = False
         self.fullUpdating = True
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
+    def log(self, msg, level = xbmc.LOGINFO):
         log('ChannelListThread: ' + msg, level)
 
 
@@ -54,21 +56,18 @@ class ChannelListThread(threading.Thread):
 
         self.chanlist.myOverlay = self.myOverlay
         self.fullUpdating = (self.myOverlay.backgroundUpdating == 0)
-        validchannels = 0
+        validchannels = sum(ch.isValid for ch in self.myOverlay.channels.values())
 
-        for i in range(self.myOverlay.maxChannels):
-            self.chanlist.channels.append(Channel())
-
-            if self.myOverlay.channels[i].isValid:
-                validchannels += 1
+        for iChannel in self.myOverlay.channels:
+            self.chanlist.channels[iChannel] = Channel()
 
         # Don't load invalid channels if minimum threading mode is on
         if self.fullUpdating and self.myOverlay.isMaster:
             if validchannels < self.chanlist.enteredChannelCount:
                 xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, LANGUAGE(30024), 4000, ICON))
 
-            for i in range(self.myOverlay.maxChannels):
-                if self.myOverlay.channels[i].isValid == False:
+            for iChannel, overlayChannel in self.myOverlay.channels.items():
+                if overlayChannel.isValid == False:
                     while True:
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
@@ -79,10 +78,9 @@ class ChannelListThread(threading.Thread):
                         if self.paused == False:
                             break
 
-                    self.chanlist.channels[i].setAccessTime(self.myOverlay.channels[i].lastAccessTime)
-
+                    self.chanlist.channels[iChannel].setAccessTime(overlayChannel.lastAccessTime)
                     try:
-                        if self.chanlist.setupChannel(i + 1, True, True, False) == True:
+                        if self.chanlist.setupChannel(iChannel, True, True, False):
                             while self.paused:
                                 if self.myOverlay.isExiting:
                                     self.log("IsExiting")
@@ -90,10 +88,10 @@ class ChannelListThread(threading.Thread):
 
                                 xbmc.sleep(1000)
 
-                            self.myOverlay.channels[i] = self.chanlist.channels[i]
+                            overlayChannel = self.myOverlay.channels[iChannel] = self.chanlist.channels[iChannel]
 
-                            if self.myOverlay.channels[i].isValid == True:
-                                xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, xbmc.getLocalizedString(19029) + ' ' + str(i + 1) + ' ' + LANGUAGE(30025), 4000, ICON))
+                            if overlayChannel.isValid:
+                                xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, xbmc.getLocalizedString(19029) + ' ' + str(iChannel) + ' ' + LANGUAGE(30025), 4000, ICON))
                     except:
                         self.log("Unknown Channel Creation Exception", xbmc.LOGERROR)
                         self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -103,12 +101,12 @@ class ChannelListThread(threading.Thread):
         self.chanlist.sleepTime = 0.3
 
         while True:
-            for i in range(self.myOverlay.maxChannels):
+            for iChannel, iOverlayChannel in self.myOverlay.channels.items():
                 modified = True
 
-                while modified == True and self.myOverlay.channels[i].getTotalDuration() < PREP_CHANNEL_TIME and self.myOverlay.channels[i].Playlist.size() < 16288:
+                while modified == True and iOverlayChannel.getTotalDuration() < PREP_CHANNEL_TIME and iOverlayChannel.Playlist.size() < 16288:
                     # If minimum updating is on, don't attempt to load invalid channels
-                    if self.fullUpdating == False and self.myOverlay.channels[i].isValid == False and self.myOverlay.isMaster:
+                    if self.fullUpdating == False and iOverlayChannel.isValid == False and self.myOverlay.isMaster:
                         break
 
                     modified = False
@@ -118,37 +116,38 @@ class ChannelListThread(threading.Thread):
                         return
 
                     xbmc.sleep(2000)
-                    curtotal = self.myOverlay.channels[i].getTotalDuration()
+                    curtotal = iOverlayChannel.getTotalDuration()
+                    curChannel = self.chanlist.channels[iChannel]
 
                     if self.myOverlay.isMaster:
                         if curtotal > 0:
                             # When appending, many of the channel variables aren't set, so copy them over.
                             # This needs to be done before setup since a rule may use one of the values.
                             # It also needs to be done after since one of them may have changed while being setup.
-                            self.chanlist.channels[i].playlistPosition = self.myOverlay.channels[i].playlistPosition
-                            self.chanlist.channels[i].showTimeOffset = self.myOverlay.channels[i].showTimeOffset
-                            self.chanlist.channels[i].lastAccessTime = self.myOverlay.channels[i].lastAccessTime
-                            self.chanlist.channels[i].totalTimePlayed = self.myOverlay.channels[i].totalTimePlayed
-                            self.chanlist.channels[i].isPaused = self.myOverlay.channels[i].isPaused
-                            self.chanlist.channels[i].mode = self.myOverlay.channels[i].mode
+                            curChannel.playlistPosition = iOverlayChannel.playlistPosition
+                            curChannel.showTimeOffset = iOverlayChannel.showTimeOffset
+                            curChannel.lastAccessTime = iOverlayChannel.lastAccessTime
+                            curChannel.totalTimePlayed = iOverlayChannel.totalTimePlayed
+                            curChannel.isPaused = iOverlayChannel.isPaused
+                            curChannel.mode = iOverlayChannel.mode
                             # Only allow appending valid channels, don't allow erasing them
 
                             try:
-                                self.chanlist.setupChannel(i + 1, True, False, True)
+                                self.chanlist.setupChannel(iChannel, True, False, True)
                             except:
                                 self.log("Unknown Channel Appending Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
                                 return
 
-                            self.chanlist.channels[i].playlistPosition = self.myOverlay.channels[i].playlistPosition
-                            self.chanlist.channels[i].showTimeOffset = self.myOverlay.channels[i].showTimeOffset
-                            self.chanlist.channels[i].lastAccessTime = self.myOverlay.channels[i].lastAccessTime
-                            self.chanlist.channels[i].totalTimePlayed = self.myOverlay.channels[i].totalTimePlayed
-                            self.chanlist.channels[i].isPaused = self.myOverlay.channels[i].isPaused
-                            self.chanlist.channels[i].mode = self.myOverlay.channels[i].mode
+                            curChannel.playlistPosition = iOverlayChannel.playlistPosition
+                            curChannel.showTimeOffset = iOverlayChannel.showTimeOffset
+                            curChannel.lastAccessTime = iOverlayChannel.lastAccessTime
+                            curChannel.totalTimePlayed = iOverlayChannel.totalTimePlayed
+                            curChannel.isPaused = iOverlayChannel.isPaused
+                            curChannel.mode = iOverlayChannel.mode
                         else:
                             try:
-                                self.chanlist.setupChannel(i + 1, True, True, False)
+                                self.chanlist.setupChannel(iChannel, True, True, False)
                             except:
                                 self.log("Unknown Channel Modification Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -156,18 +155,18 @@ class ChannelListThread(threading.Thread):
                     else:
                         try:
                             # We're not master, so no modifications...just try and load the channel
-                            self.chanlist.setupChannel(i + 1, True, False, False)
+                            self.chanlist.setupChannel(iChannel, True, False, False)
                         except:
                             self.log("Unknown Channel Loading Exception", xbmc.LOGERROR)
                             self.log(traceback.format_exc(), xbmc.LOGERROR)
                             return
 
-                    self.myOverlay.channels[i] = self.chanlist.channels[i]
+                    iOverlayChannel = self.myOverlay.channels[iChannel] = self.chanlist.channels[iChannel]
 
                     if self.myOverlay.isMaster:
-                        ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(self.myOverlay.channels[i].totalTimePlayed))
+                        ADDON_SETTINGS.setSetting('Channel_' + str(iChannel) + '_time', str(iOverlayChannel.totalTimePlayed))
 
-                    if self.myOverlay.channels[i].getTotalDuration() > curtotal and self.myOverlay.isMaster:
+                    if iOverlayChannel.getTotalDuration() > curtotal and self.myOverlay.isMaster:
                         modified = True
 
                     # A do-while loop for the paused state
@@ -195,7 +194,7 @@ class ChannelListThread(threading.Thread):
                 xbmc.sleep(2000)
                 timeslept += 2
 
-        self.log("All channels up to date.  Exiting thread.")
+        self.log("All channels up to date.  Exiting thread.")           #todo:? review
 
 
     def pause(self):

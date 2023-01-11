@@ -25,8 +25,8 @@ import random
 
 from Globals import *
 from Playlist import PlaylistItem
-
-
+from ChannelList import ChannelList
+from Overlay import TVOverlay
 
 class RulesList:
     def __init__(self) -> object:
@@ -115,7 +115,7 @@ class BaseRule:
         return self.myId
 
 
-    def runAction(self, actionid, channelList, param):
+    def runAction(self, actionid, channelList: ChannelList, param):
         return param
 
 
@@ -415,7 +415,7 @@ class RenameRule(BaseRule):
         self.validateTextBox(0, 18)
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
             self.validate()
             channeldata.name = self.optionValues[0]
@@ -454,13 +454,13 @@ class NoShowRule(BaseRule):
         self.validateTextBox(0, 20)
 
 
-    def runAction(self, actionid, channelList, filelist):
+    def runAction(self, actionid, channelList: ChannelList, filelist):
         if actionid == RULES_ACTION_LIST:
             self.validate()
             opt = self.optionValues[0].lower()
             realindex = 0
 
-            for index in range(len(filelist)):
+            for index in range(len(filelist)):           #todo: refactor playlist items and logic
                 item = filelist[realindex]
                 loc = item.find(',')
 
@@ -537,7 +537,7 @@ class ScheduleChannelRule(BaseRule):
         self.validateDigitBox(4, 1, 1000, 1)
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         self.log("runAction " + str(actionid))
 
         if actionid == RULES_ACTION_START:
@@ -607,7 +607,7 @@ class ScheduleChannelRule(BaseRule):
                 pass
 
 
-    def runSchedulingRules(self, channelList, channeldata):
+    def runSchedulingRules(self, channelList: ChannelList, channeldata):
         self.log("runSchedulingRules")
         curchan = channelList.runningActionChannel
         self.hasRun = True
@@ -739,7 +739,7 @@ class ScheduleChannelRule(BaseRule):
 
     # Add a single show (or shows) to the channel at nextScheduledTime
     # This needs to modify the startIndex value if something is added
-    def addScheduledShow(self, channelList, channeldata, appending):
+    def addScheduledShow(self, channelList: ChannelList, channeldata, appending):
         self.log("addScheduledShow")
         chan = 0
         epcount = 0
@@ -756,7 +756,9 @@ class ScheduleChannelRule(BaseRule):
             epcount = int(self.optionValues[3])
             startingep = int(self.optionValues[4]) - 1
         except:
-            pass
+            self.log("Failed to load channel-rule options values")
+            return False
+
 
         if startingep < 0:
             startingep = 0
@@ -772,17 +774,18 @@ class ScheduleChannelRule(BaseRule):
             self.saveOptions(channeldata)
             return True
 
-        if chan > channelList.maxChannels or chan < 1 or epcount < 1:
+        if (not chan in channelList.channels) or epcount < 1:
             self.log("channel number is invalid")
             return False
 
-        if len(channelList.channels) < chan or channelList.channels[chan - 1].isSetup == False:
+        currentChannel = channelList.channels[chan]
+        if currentChannel.isSetup == False:
             if channelList.myOverlay.isMaster:
                 channelList.setupChannel(chan, True, True, False)
             else:
                 channelList.setupChannel(chan, True, False, False)
 
-        if channelList.channels[chan - 1].Playlist.size() < 1:
+        if currentChannel.Playlist.size() < 1:
             self.log("scheduled channel isn't valid")
             return False
 
@@ -833,11 +836,11 @@ class ScheduleChannelRule(BaseRule):
 
         for i in range(epcount):
             item = PlaylistItem()
-            item.duration = channelList.channels[chan - 1].getItemDuration(startingep + i)
-            item.filename = channelList.channels[chan - 1].getItemFilename(startingep + i)
-            item.description = channelList.channels[chan - 1].getItemDescription(startingep + i)
-            item.title = channelList.channels[chan - 1].getItemTitle(startingep + i)
-            item.episodetitle = channelList.channels[chan - 1].getItemEpisodeTitle(startingep + i)
+            item.duration = currentChannel.getItemDuration(startingep + i)
+            item.filename = currentChannel.getItemFilename(startingep + i)
+            item.description = currentChannel.getItemDescription(startingep + i)
+            item.title = currentChannel.getItemTitle(startingep + i)
+            item.episodetitle = currentChannel.getItemEpisodeTitle(startingep + i)
             channeldata.Playlist.itemlist.insert(showindex, item)
             channeldata.Playlist.totalDuration += item.duration
             showindex += 1
@@ -853,7 +856,7 @@ class ScheduleChannelRule(BaseRule):
         return True
 
 
-    def rearrangeShows(self, showindex, timedif, channeldata, channelList):
+    def rearrangeShows(self, showindex, timedif, channeldata, channelList: ChannelList):
         self.log("rearrangeShows " + str(showindex) + " " + str(timedif))
         self.log("start index: " + str(self.startIndex) + ", end index: " + str(showindex))
         matchdur = timedif
@@ -910,7 +913,7 @@ class OnlyWatchedRule(BaseRule):
         return OnlyWatchedRule()
 
 
-    def runAction(self, actionid, channelList, filedata):
+    def runAction(self, actionid, channelList: ChannelList, filedata):
         if actionid == RULES_ACTION_JSON:
             playcount = re.search('"playcount" *: *([0-9]*?),', filedata)
             pc = 0
@@ -940,7 +943,7 @@ class DontAddChannel(BaseRule):
         return DontAddChannel()
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
             channeldata.isValid = False
 
@@ -981,7 +984,7 @@ class InterleaveChannel(BaseRule):
         self.validateDigitBox(3, 1, 10000, 1)
 
 
-    def runAction(self, actionid, channelList, filelist):
+    def runAction(self, actionid, channelList: ChannelList, filelist):
         if actionid == RULES_ACTION_LIST:
             self.log("runAction")
             chan = 0
@@ -1000,7 +1003,7 @@ class InterleaveChannel(BaseRule):
             except:
                 self.log("Except when reading params")
 
-            if chan > channelList.maxChannels or chan < 1 or minint < 1 or maxint < 1 or startingep < 1:
+            if (not chan in channelList.channels) or minint < 1 or maxint < 1 or startingep < 1:
                 return filelist
 
             if minint > maxint:
@@ -1008,13 +1011,14 @@ class InterleaveChannel(BaseRule):
                 minint = maxint
                 maxint = v
 
-            if len(channelList.channels) < chan or channelList.channels[chan - 1].isSetup == False:
+            currentChannel = channelList.channels[chan]
+            if currentChannel.isSetup == False:
                 if channelList.myOverlay.isMaster:
                     channelList.setupChannel(chan, True, True, False)
                 else:
                     channelList.setupChannel(chan, True, False, False)
 
-            if channelList.channels[chan - 1].Playlist.size() < 1:
+            if currentChannel.Playlist.size() < 1:
                 self.log("The target channel is empty")
                 return filelist
 
@@ -1024,19 +1028,19 @@ class InterleaveChannel(BaseRule):
             newfilelist = []
             self.log("Length of original list: " + str(len(filelist)))
 
-            while realindex < len(filelist):
+            while realindex < len(filelist):        #todo: refactor playlist item entries
                 if channelList.threadPause() == False:
                     return filelist
 
                 while startindex < realindex:
                     newfilelist.append(filelist[startindex])
                     startindex += 1
-
-                newstr = str(channelList.channels[chan - 1].getItemDuration(startingep - 1)) + ',' + channelList.channels[chan - 1].getItemTitle(startingep - 1)
-                newstr += "//" + channelList.channels[chan - 1].getItemEpisodeTitle(startingep - 1)
-                newstr += "//" + channelList.channels[chan - 1].getItemDescription(startingep - 1)
-                newstr += "//" + str(channelList.channels[chan - 1].getItemPlaycount(startingep - 1))
-                newstr += '\n' + channelList.channels[chan - 1].getItemFilename(startingep - 1)
+                
+                newstr = str(currentChannel.getItemDuration(startingep - 1)) + ',' + currentChannel.getItemTitle(startingep - 1)
+                newstr += "//" + currentChannel.getItemEpisodeTitle(startingep - 1)
+                newstr += "//" + currentChannel.getItemDescription(startingep - 1)
+                newstr += "//" + str(currentChannel.getItemPlaycount(startingep - 1))
+                newstr += '\n' + currentChannel.getItemFilename(startingep - 1)
                 newfilelist.append(newstr)
                 realindex += random.randint(minint, maxint)
                 startingep += 1
@@ -1045,7 +1049,7 @@ class InterleaveChannel(BaseRule):
                 newfilelist.append(filelist[startindex])
                 startindex += 1
 
-            startingep = channelList.channels[chan - 1].fixPlaylistIndex(startingep) + 1
+            startingep = currentChannel.fixPlaylistIndex(startingep) + 1
             # Write starting episode
             self.optionValues[2] = str(startingep)
             ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rule_' + str(curruleid + 1) + '_opt_4', self.optionValues[2])
@@ -1069,7 +1073,7 @@ class ForceRealTime(BaseRule):
         return ForceRealTime()
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_BEFORE_TIME:
             channeldata.mode &= ~MODE_STARTMODES
             channeldata.mode |= MODE_REALTIME
@@ -1091,7 +1095,7 @@ class AlwaysPause(BaseRule):
         return AlwaysPause()
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_BEFORE_TIME:
             channeldata.mode |= MODE_ALWAYSPAUSE
 
@@ -1111,7 +1115,7 @@ class ForceResume(BaseRule):
         return ForceResume()
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_BEFORE_TIME:
             channeldata.mode &= ~MODE_STARTMODES
             channeldata.mode |= MODE_RESUME
@@ -1133,7 +1137,7 @@ class ForceRandom(BaseRule):
         return ForceRandom()
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_BEFORE_TIME:
             channeldata.mode &= ~MODE_STARTMODES
             channeldata.mode |= MODE_RANDOM
@@ -1155,7 +1159,7 @@ class OnlyUnWatchedRule(BaseRule):
         return OnlyUnWatchedRule()
 
 
-    def runAction(self, actionid, channelList, filedata):
+    def runAction(self, actionid, channelList: ChannelList, filedata):
         if actionid == RULES_ACTION_JSON:
             playcount = re.search('"playcount" *: *([0-9]*?),', filedata)
             pc = 0
@@ -1186,7 +1190,7 @@ class PlayShowInOrder(BaseRule):
         return PlayShowInOrder()
 
 
-    def runAction(self, actionid, channelList, param):
+    def runAction(self, actionid, channelList: ChannelList, param):
         if actionid == RULES_ACTION_START:
             del self.showInfo[:]
 
@@ -1199,7 +1203,7 @@ class PlayShowInOrder(BaseRule):
         return param
 
 
-    def storeShowInfo(self, channelList, filedata):
+    def storeShowInfo(self, channelList: ChannelList, filedata):
         # Store the filename, season, and episode number
         match = re.search('"file" *: *"(.*?)",', filedata)
 
@@ -1216,7 +1220,7 @@ class PlayShowInOrder(BaseRule):
                 pass
 
 
-    def sortShows(self, channelList, filelist):
+    def sortShows(self, channelList: ChannelList, filelist):
         if len(self.showInfo) == 0:
             return filelist
 
@@ -1251,7 +1255,7 @@ class PlayShowInOrder(BaseRule):
 
         curindex = 0
 
-        for item in filelist:
+        for item in filelist:               #todo: refactor playlist items and logic
             if channelList.threadPause() == False:
                 return filelist
 
@@ -1282,7 +1286,7 @@ class PlayShowInOrder(BaseRule):
         return filelist
 
 
-    def findInFileList(self, filelist, text):
+    def findInFileList(self, filelist, text):           #todo: refactor playlist items and logic
         text = text.lower()
 
         for item in filelist:
@@ -1328,7 +1332,7 @@ class SetResetTime(BaseRule):
         self.validateDigitBox(0, 1, 50, '')
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_START:
             curchan = channeldata.channelNumber
             numdays = 0
@@ -1386,7 +1390,7 @@ class HandleChannelLogo(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, overlay, channeldata):
+    def runAction(self, actionid, overlay: TVOverlay, channeldata):
         if actionid == RULES_ACTION_OVERLAY_SET_CHANNEL:
             self.storedLogoValue = overlay.showChannelBug
 
@@ -1430,7 +1434,7 @@ class EvenShowsRule(BaseRule):
         self.validateDigitBox(0, 1, 20, 1)
 
 
-    def runAction(self, actionid, channelList, filelist):
+    def runAction(self, actionid, channelList: ChannelList, filelist): 
         if actionid == RULES_ACTION_LIST:
             self.validate()
 
@@ -1441,7 +1445,7 @@ class EvenShowsRule(BaseRule):
                 realindex = 0
                 inarow = 0
 
-                for index in range(len(filelist)):
+                for index in range(len(filelist)):           #todo: refactor playlist items and logic
                     item = filelist[index]
                     self.log("index " + str(index) + " is " + item)
                     loc = item.find(',')
@@ -1509,7 +1513,7 @@ class FilterAdultContent(BaseRule):
     def copy(self):
         return FilterAdultContent()
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, channelList: ChannelList, channeldata):
         if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED or actionid == RULES_ACTION_START:
             if ADDON_SETTINGS.getSetting('AdultContent') == "false":
                 channeldata.isValid = False

@@ -18,9 +18,6 @@
 
 from Playlist import Playlist
 from Globals import *
-from Rules import *
-
-
 
 class Channel:
     def __init__(self):
@@ -46,11 +43,13 @@ class Channel:
         log('Channel: ' + msg, level)
 
 
-    def setPlaylist(self, filename):
+    def setPlaylist(self, filename) -> bool:
         return self.Playlist.load(filename)
 
 
     def loadRules(self, channel):
+        from Rules import RulesList
+
         del self.ruleList[:]
         listrules = RulesList()
         self.channelNumber = channel

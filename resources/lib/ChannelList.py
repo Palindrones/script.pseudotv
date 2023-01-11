@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import importlib
 import subprocess, os, traceback
@@ -45,8 +46,7 @@ class ChannelList:
         self.showGenreList = []
         self.movieGenreList = []
         self.showList = []
-        self.channels = []#list[Channel]
-        self.channelsDic = {}#dict[int,Channel]
+        self.channels: dict[int,Channel] = {}
         self.videoParser = VideoParser()
         self.sleepTime = 0
         self.threadPaused = False
@@ -83,7 +83,7 @@ class ChannelList:
         except:
             self.lastExitTime = int(time.time())
 
-    def setupList(self):
+    def setupList(self) -> dict[int, Channel]:
         self.readConfig()
         self.updateDialog.create(ADDON_NAME, LANGUAGE(30167))
         self.updateDialog.update(0, LANGUAGE(30167))
@@ -96,10 +96,9 @@ class ChannelList:
             makenewlists = True
 
         # Go through all channels, create their lists, and setup the new playlist
-        for i in range(self.maxChannels):
+        for i in range(1, self.maxChannels + 1):
             self.updateDialogProgress = i * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(i + 1)), LANGUAGE(30165)]))
-            self.channels.append(Channel())
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(i)), LANGUAGE(30165)]))
 
             # If the user pressed cancel, stop everything and exit
             if self.updateDialog.iscanceled():
@@ -107,19 +106,17 @@ class ChannelList:
                 self.updateDialog.close()
                 return None
 
-            self.setupChannel(i + 1, False, makenewlists, False)
-
-            if self.channels[i].isValid:
-                foundvalid = True
+            self.setupChannel(i, False, makenewlists, False)
+            foundvalid |= self.channels[i].isValid
 
         if makenewlists is True:
             ADDON.setSetting('ForceChannelReset', 'false')
 
         if foundvalid is False and makenewlists is False:
-            for i in range(self.maxChannels):
+            for i in  range(1, self.maxChannels + 1):
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(i + 1)), LANGUAGE(30165)]))
-                self.setupChannel(i + 1, False, True, False)
+                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(i)), LANGUAGE(30165)]))
+                self.setupChannel(i, False, True, False)
 
                 if self.channels[i].isValid:
                     foundvalid = True
@@ -129,7 +126,6 @@ class ChannelList:
         self.updateDialog.close()
 
         return self.channels
-
 
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('ChannelList: ' + msg, level)
@@ -158,8 +154,8 @@ class ChannelList:
 
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
-    def setupChannel(self, channel, background = False, makenewlist = False, append = False):
-        self.log('setupChannel ' + str(channel))
+    def setupChannel(self, channelNumber: int, background = False, makenewlist = False, append = False):
+        self.log('setupChannel ' + str(channelNumber))
         returnval = False
         createlist = makenewlist
         chtype = 9999
@@ -167,8 +163,8 @@ class ChannelList:
         chsetting2 = ''
         needsreset = False
         self.background = background
-        self.settingChannel = channel
-        channelBaseName = 'Channel_' + str(channel)
+        self.settingChannel = channelNumber
+        channelBaseName = 'Channel_' + str(channelNumber)
 
         try:
             chtype = int(ADDON_SETTINGS.getSetting(channelBaseName + '_type'))
@@ -177,22 +173,23 @@ class ChannelList:
         except:
             pass
 
-        while len(self.channels) < channel:
-            self.channels.append(Channel())
+        curChannel = self.channels.get(channelNumber, Channel())
+        if not channelNumber in self.channels:
+            self.channels[channelNumber] = curChannel
 
         if chtype == 9999:
-            self.channels[channel - 1].isValid = False
+            curChannel.isValid = False
             return False
 
-        self.channels[channel - 1].isSetup = True
-        self.channels[channel - 1].loadRules(channel)
-        self.runActions(RULES_ACTION_START, channel, self.channels[channel - 1])
+        curChannel.isSetup = True
+        curChannel.loadRules(channelNumber)
+        self.runActions(RULES_ACTION_START, channelNumber, curChannel)
 
         try:
             needsreset = ADDON_SETTINGS.getSetting(channelBaseName + '_changed') == 'True'
 
             if needsreset:
-                self.channels[channel - 1].isSetup = False
+                curChannel.isSetup = False
         except:
             pass
 
@@ -201,20 +198,20 @@ class ChannelList:
         # Don't load if we need to reset anyway
         if FileAccess.exists(CHANNELS_LOC + channelBaseName + '.m3u') and append == False and needsreset == False:
             try:
-                #self.channels[channel - 1].totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', True))
-                self.channels[channel - 1].totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', False))
+                #self.channelsDic[channel].totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', True))
+                curChannel.totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', False))
                 createlist = True
 
                 if not self.background:
-                    self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channel)), LANGUAGE(30171)]))
+                    self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channelNumber)), LANGUAGE(30171)]))
 
-                if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') is True:
-                    self.channels[channel - 1].isValid = True
-                    self.channels[channel - 1].fileName = CHANNELS_LOC + channelBaseName + '.m3u'
+                if curChannel.setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') is True:			####
+                    curChannel.isValid = True
+                    curChannel.fileName = CHANNELS_LOC + channelBaseName + '.m3u'
                     returnval = True
 
                     # If this channel has been watched for longer than it lasts, reset the channel
-                    if self.channelResetSetting == 0 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                    if self.channelResetSetting == 0 and curChannel.totalTimePlayed < curChannel.getTotalDuration():
                         createlist = False
 
                     if self.channelResetSetting > 0 and self.channelResetSetting < 4:
@@ -238,7 +235,7 @@ class ChannelList:
                 pass
 
         if createlist or needsreset:
-            self.channels[channel - 1].isValid = False
+            curChannel.isValid = False
 
             if makenewlist:
                 try:
@@ -253,86 +250,86 @@ class ChannelList:
 
         if append is False:
             if chtype == 6 and chsetting2 == str(MODE_ORDERAIRDATE):
-                self.channels[channel - 1].mode = MODE_ORDERAIRDATE
+                curChannel.mode = MODE_ORDERAIRDATE
 
             # if there is no start mode in the channel mode flags, set it to the default
-            if self.channels[channel - 1].mode & MODE_STARTMODES == 0:
+            if curChannel.mode & MODE_STARTMODES == 0:
                 if self.startMode == 0:
-                    self.channels[channel - 1].mode |= MODE_RESUME
+                    curChannel.mode |= MODE_RESUME
                 elif self.startMode == 1:
-                    self.channels[channel - 1].mode |= MODE_REALTIME
+                    curChannel.mode |= MODE_REALTIME
                 elif self.startMode == 2:
-                    self.channels[channel - 1].mode |= MODE_RANDOM
+                    curChannel.mode |= MODE_RANDOM
 
         if ((createlist or needsreset) and makenewlist) or append:
             if not self.background:
-                self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(channel)), LANGUAGE(30172)]))
+                self.updateDialogProgress = (channelNumber) * 100 // self.enteredChannelCount
+                self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % (str(channelNumber)), LANGUAGE(30172)]))
 
-            if self.makeChannelList(channel, chtype, chsetting1, chsetting2, append):
-                if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u') == True:
+            if self.makeChannelList(channelNumber, chtype, chsetting1, chsetting2, append):
+                if curChannel.setPlaylist(CHANNELS_LOC + channelBaseName + '.m3u'):
                     returnval = True
-                    self.channels[channel - 1].fileName = CHANNELS_LOC + channelBaseName + '.m3u'
-                    self.channels[channel - 1].isValid = True
+                    curChannel.fileName = CHANNELS_LOC + channelBaseName + '.m3u'
+                    curChannel.isValid = True
 
                     # Don't reset variables on an appending channel
                     if append is False:
-                        self.channels[channel - 1].totalTimePlayed = 0
+                        curChannel.totalTimePlayed = 0
                         ADDON_SETTINGS.setSetting(channelBaseName + '_time', '0')
 
                         if needsreset:
                             ADDON_SETTINGS.setSetting(channelBaseName + '_changed', 'False')
-                            self.channels[channel - 1].isSetup = True
+                            curChannel.isSetup = True
 
-        self.runActions(RULES_ACTION_BEFORE_CLEAR, channel, self.channels[channel - 1])
+        self.runActions(RULES_ACTION_BEFORE_CLEAR, channelNumber, curChannel)
 
         # Don't clear history when appending channels
         if not self.background and not append and self.myOverlay.isMaster:
-            self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channel)), LANGUAGE(30173)]))
-            self.clearPlaylistHistory(channel)
+            self.updateDialogProgress = (channelNumber) * 100 // self.enteredChannelCount
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30166) % (str(channelNumber)), LANGUAGE(30173)]))
+            self.clearPlaylistHistory(channelNumber)
 
         if not append:
-            self.runActions(RULES_ACTION_BEFORE_TIME, channel, self.channels[channel - 1])
+            self.runActions(RULES_ACTION_BEFORE_TIME, channelNumber, curChannel)
 
-            if self.channels[channel - 1].mode & MODE_ALWAYSPAUSE > 0:
-                self.channels[channel - 1].isPaused = True
+            if curChannel.mode & MODE_ALWAYSPAUSE > 0:
+                curChannel.isPaused = True
 
-            if self.channels[channel - 1].mode & MODE_RANDOM > 0:
-                self.channels[channel - 1].showTimeOffset = random.randint(0, self.channels[channel - 1].getTotalDuration())
+            if curChannel.mode & MODE_RANDOM > 0:
+                curChannel.showTimeOffset = random.randint(0, curChannel.getTotalDuration())
 
-            if self.channels[channel - 1].mode & MODE_REALTIME > 0:
+            if curChannel.mode & MODE_REALTIME > 0:
                 timedif = int(self.myOverlay.timeStarted) - self.lastExitTime
-                self.channels[channel - 1].totalTimePlayed += timedif
+                curChannel.totalTimePlayed += timedif
 
-            if self.channels[channel - 1].mode & MODE_RESUME > 0:
-                self.channels[channel - 1].showTimeOffset = self.channels[channel - 1].totalTimePlayed
-                self.channels[channel - 1].totalTimePlayed = 0
+            if curChannel.mode & MODE_RESUME > 0:
+                curChannel.showTimeOffset = curChannel.totalTimePlayed
+                curChannel.totalTimePlayed = 0
 
-            while self.channels[channel - 1].showTimeOffset > self.channels[channel - 1].getCurrentDuration():
-                self.channels[channel - 1].showTimeOffset -= self.channels[channel - 1].getCurrentDuration()
-                self.channels[channel - 1].addShowPosition(1)
+            while curChannel.showTimeOffset > curChannel.getCurrentDuration():
+                curChannel.showTimeOffset -= curChannel.getCurrentDuration()
+                curChannel.addShowPosition(1)
 
-        self.channels[channel - 1].name = self.getChannelName(chtype, chsetting1)
+        curChannel.name = self.getChannelName(chtype, chsetting1)
 
         if ((createlist or needsreset) and makenewlist) and returnval:
-            self.runActions(RULES_ACTION_FINAL_MADE, channel, self.channels[channel - 1])
+            self.runActions(RULES_ACTION_FINAL_MADE, channelNumber, curChannel)
         else:
-            self.runActions(RULES_ACTION_FINAL_LOADED, channel, self.channels[channel - 1])
+            self.runActions(RULES_ACTION_FINAL_LOADED, channelNumber, curChannel)
 
         return returnval
 
-    def clearPlaylistHistory(self, channel):
+    def clearPlaylistHistory(self, channelNumber):
         self.log("clearPlaylistHistory")
-
-        if self.channels[channel - 1].isValid == False:
+        currentChannel = self.channels[channelNumber]
+        if currentChannel.isValid == False:
             self.log("channel not valid, ignoring")
             return
 
         # if we actually need to clear anything
-        if self.channels[channel - 1].totalTimePlayed > (60 * 60 * 24 * 2):
+        if currentChannel.totalTimePlayed > (60 * 60 * 24 * 2):
             try:
-                fle = FileAccess.open(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u', 'w')
+                fle = FileAccess.open(CHANNELS_LOC + 'channel_' + str(channelNumber) + '.m3u', 'w')
             except:
                 self.log("clearPlaylistHistory Unable to open the smart playlist", xbmc.LOGERROR)
                 return
@@ -341,15 +338,15 @@ class ChannelList:
             tottime = 0
             timeremoved = 0
 
-            for i in range(self.channels[channel - 1].Playlist.size()):
-                tottime += self.channels[channel - 1].getItemDuration(i)
+            for i in range(currentChannel.Playlist.size()):
+                tottime += currentChannel.getItemDuration(i)
 
-                if tottime > (self.channels[channel - 1].totalTimePlayed - (60 * 60 * 12)):
-                    tmpstr = str(self.channels[channel - 1].getItemDuration(i)) + ','
-                    tmpstr += self.channels[channel - 1].getItemTitle(i) + "//" + self.channels[channel - 1].getItemEpisodeTitle(i) + "//" + self.channels[channel - 1].getItemDescription(i)
+                if tottime > (currentChannel.totalTimePlayed - (60 * 60 * 12)):            #todo: refactor using playlistitem class
+                    tmpstr = str(currentChannel.getItemDuration(i)) + ','
+                    tmpstr += currentChannel.getItemTitle(i) + "//" + currentChannel.getItemEpisodeTitle(i) + "//" + currentChannel.getItemDescription(i)
                     tmpstr = uni(tmpstr[:2036])
                     tmpstr = tmpstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")
-                    tmpstr = uni(tmpstr) + uni('\n') + uni(self.channels[channel - 1].getItemFilename(i))
+                    tmpstr = uni(tmpstr) + uni('\n') + uni(currentChannel.getItemFilename(i))
                     flewrite += uni("#EXTINF:") + uni(tmpstr) + uni("\n")
                 else:
                     timeremoved = tottime
@@ -358,12 +355,12 @@ class ChannelList:
             fle.close()
 
             if timeremoved > 0:
-                if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') is False:
-                    self.channels[channel - 1].isValid = False
+                if currentChannel.setPlaylist(CHANNELS_LOC + 'channel_' + str(channelNumber) + '.m3u') is False:
+                    currentChannel.isValid = False
                 else:
-                    self.channels[channel - 1].totalTimePlayed -= timeremoved
+                    currentChannel.totalTimePlayed -= timeremoved
                     # Write this now so anything sharing the playlists will get the proper info
-                    ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_time', str(self.channels[channel - 1].totalTimePlayed))
+                    ADDON_SETTINGS.setSetting('Channel_' + str(channelNumber) + '_time', str(currentChannel.totalTimePlayed))
 
     def getChannelName(self, chtype, setting1):
         self.log('getChannelName ' + str(chtype))
@@ -459,13 +456,13 @@ class ChannelList:
         return
 
     # Based on a smart playlist, create a normal playlist that can actually be used by us
-    def makeChannelList(self, channel, chtype, setting1, setting2, append = False) -> bool:
-        self.log('makeChannelList ' + str(channel))
+    def makeChannelList(self, channelNumber, chtype, setting1, setting2, append = False) -> bool:
+        self.log('makeChannelList ' + str(channelNumber))
         israndom = True
         fileList = []
-        channelplaylistPath = CHANNELS_LOC + "channel_" + str(channel) + ".m3u"
+        channelplaylistPath = CHANNELS_LOC + "channel_" + str(channelNumber) + ".m3u"
 
-        if self.channels[channel - 1].isSkipped == True:
+        if self.channels[channelNumber].isSkipped == True:
             self.log("channel set to skip, ignoring")
             return False
 
@@ -486,7 +483,7 @@ class ChannelList:
             fle = uni(fle)
 
             if len(fle) == 0:
-                self.log('Unable to locate the playlist for channel ' + str(channel), xbmc.LOGERROR)
+                self.log('Unable to locate the playlist for channel ' + str(channelNumber), xbmc.LOGERROR)
                 return False
 
             try:
@@ -509,9 +506,9 @@ class ChannelList:
                 self.validatePlaylistFileRule(dom,setting1, fle)
 
             if self.getSmartPlaylistType(dom) == 'mixed':
-                fileList = self.buildMixedFileList(dom, channel)
+                fileList = self.buildMixedFileList(dom, channelNumber)
             else:
-                fileList = self.buildFileList(fle, channel)
+                fileList = self.buildFileList(fle, channelNumber)
 
             try:
                 order = dom.getElementsByTagName('order')
@@ -541,12 +538,12 @@ class ChannelList:
         if len(fileList) > 16384:
             fileList = fileList[:16384]
 
-        fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
-        self.channels[channel - 1].isRandom = israndom
+        fileList = self.runActions(RULES_ACTION_LIST, channelNumber, fileList)
+        self.channels[channelNumber].isRandom = israndom
 
         if append:
-            if len(fileList) + self.channels[channel - 1].Playlist.size() > 16384:
-                fileList = fileList[:(16384 - self.channels[channel - 1].Playlist.size())]
+            if len(fileList) + self.channels[channelNumber].Playlist.size() > 16384:
+                fileList = fileList[:(16384 - self.channels[channelNumber].Playlist.size())]
         else:
             if len(fileList) > 16384:
                 fileList = fileList[:16384]
@@ -1011,7 +1008,7 @@ class ChannelList:
                                 theplot = plotoutline if len(plotoutline) > 0 else ( plot if len(plot) > 0 else LANGUAGE(30023))
                                 theplot = theplot.replace('//','')
 
-                                tmpstr = str(dur) + ','
+                                tmpstr = str(dur) + ','                         #todo: refactor using playlistitem class
 
                                 # This is a TV show
                                 if showtitle != None and len(showtitle) > 0:
@@ -1046,7 +1043,7 @@ class ChannelList:
                                 tmpstr = tmpstr.replace("\n", " ").replace("\r", " ").replace('\"', '"')
                                 tmpstr = tmpstr + '\n' + f["file"].replace("\\\\", "\\")
 
-                                if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
+                                if self.channels[channel].mode & MODE_ORDERAIRDATE > 0:
                                     seasoneplist.append([str(season), str(episode), tmpstr])
                                 else:
                                     fileList.append(tmpstr)
@@ -1060,7 +1057,7 @@ class ChannelList:
         except Exception as e:
             self.log("json Object Exception:" + traceback.format_exc())
 
-        if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
+        if self.channels[channel].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
 
@@ -1097,15 +1094,15 @@ class ChannelList:
         return fileList
 
     # Run rules for a channel
-    def runActions(self, action, channel, parameter):
-        self.log("runActions " + str(action) + " on channel " + str(channel))
-        if channel < 1:
+    def runActions(self, action, channelNumber, parameter):
+        self.log("runActions " + str(action) + " on channel " + str(channelNumber))
+        if not channelNumber in self.channels:
             return
 
-        self.runningActionChannel = channel
+        self.runningActionChannel = channelNumber
         index = 0
 
-        for rule in self.channels[channel - 1].ruleList:
+        for rule in self.channels[channelNumber].ruleList:
             if rule.actions & action > 0:
                 self.runningActionId = index
 
