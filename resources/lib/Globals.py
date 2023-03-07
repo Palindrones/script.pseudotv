@@ -34,20 +34,19 @@ CWD = ADDON.getAddonInfo('path')
 VERSION = ADDON.getAddonInfo('version')
 ICON = ADDON.getAddonInfo('icon')
 
-def log(msg, level = xbmc.LOGDEBUG):
+def log(msg, level = xbmc.LOGDEBUG) -> None:
     try:
         xbmc.log(ADDON_ID + '-' + ascii(msg), level)
     except:
         pass
 
-
-def uni(string, encoding = 'utf-8'):
+def uni(string, encoding = 'utf-8') -> str:
     if not isinstance(string, str):
         string = str(string, encoding)
 
     return string
 
-def ascii(string):
+def ascii(string)  -> str:
     if not isinstance(string, str):
         string = string.encode('ascii', 'ignore')
 

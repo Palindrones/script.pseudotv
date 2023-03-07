@@ -34,13 +34,13 @@ class ChannelListThread(threading.Thread):
 
         threading.Thread.__init__(self)
         self.myOverlay: Optional[TVOverlay] = None
-        sys.setcheckinterval(25)
+        #sys.setswitchinterval(interval)     #sys.setcheckinterval(25) //deprecated  python >=3.2
         self.chanlist = ChannelList()
         self.paused = False
         self.fullUpdating = True
 
 
-    def log(self, msg, level = xbmc.LOGINFO):
+    def log(self, msg, level = xbmc.LOGDEBUG):
         log('ChannelListThread: ' + msg, level)
 
 

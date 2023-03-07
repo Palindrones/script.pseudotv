@@ -1,3 +1,14 @@
+2.5.2 (Palindrones)
+ Working Nexus/Matrix version
+  Fixed broken Rules Feature
+      - OnlyWatchedRule
+      - OnlyUnWatchedRule
+      - PlayShowInOrderRule	  
+  Code refactoring for readability
+    - created/implemented SmartPlaylist class
+    - refactored code around PlayListItem
+    - refactored code around Playlist.Channel change from List to Dictionary
+
 2.5.1 (Palindrones)
     Added Option to Set Adult Content Channel (Rule) and enable/disable Adult Content Channels in Settings
     Fixed Channel Configuration bugs (Matrix)

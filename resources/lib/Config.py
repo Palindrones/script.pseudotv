@@ -23,6 +23,8 @@ import datetime
 import sys, re
 import random
 
+from Playlist import SmartPlaylist
+
 
 ADDON       = xbmcaddon.Addon(id='script.pseudotv')
 CWD         = ADDON.getAddonInfo('path')
@@ -284,11 +286,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.ruleList = self.myRules.ruleList
                 self.savedRules = True
         elif controlId == 130:      # Playlist-type channel, playlist button
-            dlg = xbmcgui.Dialog()
+            dlg = xbmcgui.Dialog()      #todo: review to use different browse options/ allow for browsing of other sources
             retval = dlg.browse(1, "Channel " + str(self.channel) + " Playlist", "files", ".xsp", False, False, "special://videoplaylists/")
 
             if retval != "special://videoplaylists/":
-                self.getControl(130).setLabel(self.getSmartPlaylistName(retval), label2=retval)
+                self.getControl(130).setLabel(SmartPlaylist.getSmartPlaylistName(retval), label2=retval)
         elif controlId == 140 or controlId == 141:      # Network TV channel
             ListOptions = self.networkList
             ListChoice = xbmcgui.Dialog().select("Choose A Network", ListOptions)
@@ -413,35 +415,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def setListData(self, thelist, controlid, val):
         self.getControl(controlid).setLabel(thelist[val])
 
-    def getSmartPlaylistName(self, fle):
-        self.log("getSmartPlaylistName " + fle)
-        fle = xbmcvfs.translatePath(fle)
-
-        try:
-            xml = FileAccess.open(fle, "r")
-        except:
-            self.log('Unable to open smart playlist')
-            return ''
-
-        try:
-            dom = parse(xml)
-        except:
-            xml.close()
-            self.log("getSmartPlaylistName return unable to parse")
-            return ''
-
-        xml.close()
-
-        try:
-            plname = dom.getElementsByTagName('name')
-            self.log("getSmartPlaylistName return " + plname[0].childNodes[0].nodeValue)
-            return plname[0].childNodes[0].nodeValue
-        except:
-            self.playlisy('Unable to find element name')
-
-        self.log("getSmartPlaylistName return")
-
-
     def setChanType(self, channel, val):
         self.log("setChanType " + str(channel) + ", " + str(val))
         chantype = 9999
@@ -542,12 +515,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.getControl(109).setLabel(self.getChanTypeLabel(chantype))
 
         if chantype == 0:
-            plname = self.getSmartPlaylistName(chansetting1)
+            plname = SmartPlaylist.getSmartPlaylistName(chansetting1)
 
             if len(plname) == 0:
                 chansetting1 = ''
-
-            self.getControl(130).setLabel(self.getSmartPlaylistName(chansetting1), label2=chansetting1)
+            self.getControl(130).setLabel(SmartPlaylist.getSmartPlaylistName(chansetting1), label2=chansetting1)
         elif chantype == 1:
             self.getControl(142).setLabel(self.findItemInList(self.networkList, chansetting1))
         elif chantype == 2:
@@ -563,7 +535,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(194).setSelected(chansetting2 == str(MODE_ORDERAIRDATE))
         elif chantype == 7:
             if (chansetting1.find('/') > -1) or (chansetting1.find('\\') > -1):
-                plname = self.getSmartPlaylistName(chansetting1)
+                plname = SmartPlaylist.getSmartPlaylistName(chansetting1)
 
                 if len(plname) != 0:
                     chansetting1 = ''
@@ -576,7 +548,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("fillInDetails return")
 
 
-    def loadRules(self, channel):
+    def loadRules(self, channel):   #todo: refactor/duplicate code -> move to rules class
         self.log("loadRules")
         self.ruleList = []
         self.myRules.allRules
@@ -595,7 +567,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         except:
             self.ruleList = []
 
-    def checkRules(self, channel):
+    def checkRules(self, channel):  #todo: refactor/duplicate code -> move to rules class
         self.log("checkRules")
         rulecheck = False
         try:
@@ -607,7 +579,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             rulecheck = False
         return rulecheck
 
-    def saveRules(self, channel):
+    def saveRules(self, channel):   #todo: refactor/duplicate code -> move to rules class
         self.log("saveRules")
         rulecount = len(self.ruleList)
         ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_rulecount', str(rulecount))
@@ -659,27 +631,23 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
     def prepareConfig(self):
         self.log("prepareConfig")
-        self.showList = []
         self.getControl(105).setVisible(False)
         self.getControl(106).setVisible(False)
         chnlst = ChannelList()
         chnlst.fillTVInfo()
         chnlst.fillMovieInfo()
         self.mixedGenreList = chnlst.makeMixedList(chnlst.showGenreList, chnlst.movieGenreList)
-        self.networkList = chnlst.networkList
-        self.studioList = chnlst.studioList
-        self.showGenreList = chnlst.showGenreList
-        self.movieGenreList = chnlst.movieGenreList
-
-        for i in range(len(chnlst.showList)):
-            self.showList.append(chnlst.showList[i][0])
+        self.networkList = [n for n, c in chnlst.networkList]
+        self.studioList = [n for n, c in chnlst.studioList]
+        self.showGenreList = [n for n, c in chnlst.showGenreList]
+        self.movieGenreList = [n for n, c in chnlst.movieGenreList]
+        self.showList = [n for n, *c in chnlst.showList]
 
         self.showList.sort()
-
         self.mixedGenreList.sort(key=lambda x: x.lower())
         self.listcontrol = self.getControl(102)
 
-        for i in range(999):
+        for i in range(999):        ####refactor
             theitem = xbmcgui.ListItem()
             theitem.setLabel(str(i + 1))
             self.listcontrol.addItem(theitem)
@@ -690,7 +658,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.setFocusId(102)
         self.log("prepareConfig return")
 
-    def findFirstEmpty(self, channel):
+    def findFirstEmpty(self, channel):#### refactor
         self.log("findFirstEmpty")
         start = channel
         end = 999
@@ -708,7 +676,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("findFirstEmpty return")
 
 
-    def updateListing(self, channel = -1):
+    def updateListing(self, channel = -1): # refactor to use channelist method.
         self.log("updateListing")
         start = 0
         end = 999
@@ -718,7 +686,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             end = channel
 
         for i in range(start, end):
-            theitem = self.listcontrol.getListItem(i)
+            theitem = self.listcontrol.getListItem(i)   #refactor the -1 channel offseting/listing item
             chantype = 9999
             chansetting1 = ''
             chansetting2 = ''
@@ -731,20 +699,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             except:
                 pass
 
-            if chantype == 0:
-                newlabel = self.getSmartPlaylistName(chansetting1)
-            elif chantype == 1 or chantype == 2 or chantype == 5 or chantype == 6:
-                newlabel = chansetting1
-            elif chantype == 3:
-                newlabel = chansetting1 + " TV"
-            elif chantype == 4:
-                newlabel = chansetting1 + " Movies"
-            elif chantype == 7:
-                if chansetting1[-1] == '/' or chansetting1[-1] == '\\':
-                    newlabel = os.path.split(chansetting1[:-1])[1]
-                else:
-                    newlabel = os.path.split(chansetting1)[1]
-
+            newlabel = ChannelList.getChannelName(chantype, chansetting1)
 
             #if uncommented (replacing the final line), this would put a marker on the main channel list indicating which channels had advanced rules
             #ruleMarker = ''

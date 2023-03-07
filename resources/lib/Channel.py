@@ -21,12 +21,12 @@ from Globals import *
 
 class Channel:
     def __init__(self):
-        self.Playlist = Playlist()
+        self.Playlist:Playlist = Playlist()
         self.name = ''
         self.playlistPosition = 0
         self.showTimeOffset = 0
         self.lastAccessTime = 0
-        self.totalTimePlayed = 0
+        self.totalTimePlayed = 0    #mins
         self.fileName = ''
         self.isPaused = False
         self.isValid = False
@@ -47,8 +47,8 @@ class Channel:
         return self.Playlist.load(filename)
 
 
-    def loadRules(self, channel):
-        from Rules import RulesList
+    def loadRules(self, channel):           #todo: review method duplicates  config.py
+        from Rules import RulesList, BaseRule
 
         del self.ruleList[:]
         listrules = RulesList()
@@ -89,6 +89,10 @@ class Channel:
 
     def getCurrentDuration(self):
         return self.getItemDuration(self.playlistPosition)
+
+
+    def getItem(self, index):
+        return self.Playlist.getItem(self.fixPlaylistIndex(index))
 
 
     def getItemDuration(self, index):

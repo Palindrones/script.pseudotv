@@ -97,7 +97,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.log('setTimeLabels return')
 
 
-    def log(self, msg, level = xbmc.LOGINFO):
+    def log(self, msg, level = xbmc.LOGDEBUG):
         log('EPGWindow: ' + msg, level)
 
 

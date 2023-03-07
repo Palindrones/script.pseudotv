@@ -690,7 +690,7 @@ msgid "Updating channel list"
 msgstr ""
 
 msgctxt "#30168"
-msgid "Updating channel %s"
+msgid "Updating channel %d"
 msgstr ""
 
 msgctxt "#30170"
@@ -714,11 +714,11 @@ msgid "getting file list"
 msgstr ""
 
 msgctxt "#30175"
-msgid "added %s entry"
+msgid "added %d entry"
 msgstr ""
 
 msgctxt "#30176"
-msgid "added %s entries"
+msgid "added %d entries"
 msgstr ""
 
 msgctxt "#30177"
@@ -734,7 +734,7 @@ msgid "querying database"
 msgstr ""
 
 msgctxt "#30180"
-msgid "processing rule %s"
+msgid "processing rule %d"
 msgstr ""
 
 msgctxt "#30181"
