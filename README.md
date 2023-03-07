@@ -92,14 +92,14 @@ Replace *"Player.DisplayAfterSeek"* with
 ---
 ### Branches guide
 
-* **Matrix branch:** Suitable for Kodi VER:19 and above. 
+* **Matrix branch:** Suitable for Kodi VER:19 and Nexus(VER:20).
 * **Leia branch:** Suitable for Kodi VER:18.
 * **Krypton branch:** Suitable for Kodi VER:17 and below. 
 
 ---
 ### Credits
 
-**Developer:** Jason102, Steveb.<br>
+**Developer:** Jason102, Steveb, Palindrones.<br>
 **Code Additions:** Sranshaft, TheOddLinguist, Canuma, rafaelvieiras, fnord12.<br>
 **Skins:** Sranshaft, Zepfan, Steveb.<br>
 **Preset Images:** Jtucker1972.<br>
