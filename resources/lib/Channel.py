@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-from Playlist import Playlist
+from Playlist import Playlist, PlaylistItem
 from Globals import *
+from log import Log
 
-class Channel:
+class Channel(Log):
     def __init__(self):
         self.Playlist:Playlist = Playlist()
         self.name = ''
@@ -38,11 +39,6 @@ class Channel:
         self.isSkipped = False
         
 
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('Channel: ' + msg, level)
-
-
     def setPlaylist(self, filename) -> bool:
         return self.Playlist.load(filename)
 
@@ -55,15 +51,15 @@ class Channel:
         self.channelNumber = channel
 
         try:
-            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+            rulecount = int(ADDON_SETTINGS.getChannelSetting(channel, 'rulecount'))
 
             for i in range(rulecount):
-                ruleid = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_id'))
+                ruleid = int(ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_id'))
                 rule = listrules.getRuleById(ruleid)
                 if rule:
                     self.ruleList.append(rule.copy())
                     for x in range(rule.getOptionCount()):
-                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
+                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_opt_' + str(x + 1))
 
                     self.log("Added rule - " + self.ruleList[-1].getTitle())
         except:
@@ -91,51 +87,46 @@ class Channel:
         return self.getItemDuration(self.playlistPosition)
 
 
-    def getItem(self, index):
-        return self.Playlist.getItem(self.fixPlaylistIndex(index))
+    def getItem(self, index) -> PlaylistItem:
+        index = self.fixPlaylistIndex(index)
+        return self.Playlist[index]
 
-
-    def getItemDuration(self, index):
-        return self.Playlist.getduration(self.fixPlaylistIndex(index))
-
+    def getItemDuration(self, index):   #todo: review logic             
+        return  self.Playlist.getduration(self.fixPlaylistIndex(index))#self.getItem(index).duration#
 
     def getTotalDuration(self):
         return self.Playlist.totalDuration
 
-
     def getCurrentDescription(self):
         return self.getItemDescription(self.playlistPosition)
 
-
     def getItemDescription(self, index):
-        return self.Playlist.getdescription(self.fixPlaylistIndex(index))
-
+        return self.getItem(index).description#self.Playlist.getdescription(self.fixPlaylistIndex(index))
 
     def getCurrentEpisodeTitle(self):
         return self.getItemEpisodeTitle(self.playlistPosition)
 
     def getItemPlaycount(self, index):
-        return self.Playlist.getplaycount(self.fixPlaylistIndex(index))
-
+        return self.getItem(index).playcount #self.Playlist.getplaycount(self.fixPlaylistIndex(index))
 
     def getItemEpisodeTitle(self, index):
-        return self.Playlist.getepisodetitle(self.fixPlaylistIndex(index))
+        return self.getItem(index).episodetitle#self.Playlist.getepisodetitle(self.fixPlaylistIndex(index))
 
 
     def getCurrentTitle(self):
-        return self.getItemTitle(self.playlistPosition)
+        return self.getItem(self.playlistPosition).episodetitle#self.getItemTitle(self.playlistPosition)
 
 
     def getItemTitle(self, index):
-        return self.Playlist.getTitle(self.fixPlaylistIndex(index))
+        return self.getItem(index).title#self.Playlist.getTitle(self.fixPlaylistIndex(index))
 
 
     def getCurrentFilename(self):
-        return self.getItemFilename(self.playlistPosition)
+        return self.getItem(self.playlistPosition).filename#self.getItemFilename(self.playlistPosition)
 
 
     def getItemFilename(self, index):
-        return self.Playlist.getfilename(self.fixPlaylistIndex(index))
+        return self.getItem(index).filename#self.Playlist.getfilename(self.fixPlaylistIndex(index))
 
 
     def fixPlaylistIndex(self, index):

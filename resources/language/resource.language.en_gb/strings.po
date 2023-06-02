@@ -780,3 +780,19 @@ msgstr ""
 msgctxt "#30192"
 msgid "Adult Content Channel"
 msgstr ""
+
+msgctxt "#30200"
+msgid "Enable Audio Channels"
+msgstr ""
+
+msgctxt "#30201"
+msgid "Music Genre"
+msgstr ""
+
+msgctxt "#30202"
+msgid "adding songs"
+msgstr ""
+
+msgctxt "#30203"
+msgid "reading music data"
+msgstr ""

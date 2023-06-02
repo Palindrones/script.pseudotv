@@ -779,6 +779,75 @@
 							<visible>String.IsEmpty(Control.GetLabel(200))</visible>
 						</control>
 					</control>
+					<!-- Controls for type Music Genre -->
+					<control type="group" id="128">
+						<left>420</left>
+						<top>163</top>
+						<control type="image">
+							<left>0</left>
+							<top>0</top>
+							<width>1058</width>
+							<height>63</height>
+							<texture colordiffuse="button_focus">lists/focus.png</texture>
+							<visible>Control.HasFocus(210) | Control.HasFocus(211)</visible>
+						</control>
+						<control type="image">
+							<left>0</left>
+							<top>0</top>
+							<width>1060</width>
+							<height>63</height>
+							<texture  border="5">ptv_separator.png</texture>
+							<visible>![Control.HasFocus(210) | Control.HasFocus(211)]</visible>
+						</control>
+						<control type="label">
+							<left>0</left>
+							<top>0</top>
+							<width>300</width>
+							<height>63</height>
+							<font>font13</font>
+							<textcolor>white</textcolor>
+							<shadowcolor>text_shadow</shadowcolor>
+							<label>$LOCALIZE[515]</label>
+							<aligny>center</aligny>
+							<align>left</align>
+							<textoffsetx>40</textoffsetx>
+						</control>
+						<control type="label" id="212">
+							<left>440</left>
+							<top>0</top>
+							<width>496</width>
+							<height>63</height>
+							<font>font13</font>
+							<textcolor>white</textcolor>
+							<shadowcolor>text_shadow</shadowcolor>
+							<aligny>center</aligny>
+							<align>right</align>
+						</control>
+						<control type="button" id="210">
+							<left>956</left>
+							<top>0</top>
+							<width>32</width>
+							<height>60</height>
+							<texturefocus>buttons/spinctrl/arrow-light-down.png</texturefocus>
+							<texturenofocus colordiffuse="FFA0A0A0">buttons/spinctrl/arrow-light-down.png</texturenofocus>
+							<onup>106</onup>
+							<ondown>106</ondown>
+							<onleft>211</onleft>
+							<onright>211</onright>
+						</control>
+						<control type="button" id="211">
+							<left>988</left>
+							<top>0</top>
+							<width>32</width>
+							<height>60</height>
+							<texturefocus>buttons/spinctrl/arrow-light-up.png</texturefocus>
+							<texturenofocus colordiffuse="FFA0A0A0">buttons/spinctrl/arrow-light-up.png</texturenofocus>
+							<onup>106</onup>
+							<ondown>106</ondown>
+							<onleft>210</onleft>
+							<onright>9002</onright>
+						</control>
+					</control>
 				</control>
 			</control>
 			<!-- right group -->

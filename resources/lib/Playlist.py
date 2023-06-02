@@ -25,6 +25,7 @@ import traceback
 from xml.dom.minidom import *#parse, parseString
 from Globals import ADDON, GEN_CHAN_LOC, LANGUAGE, MEDIA_LIMIT, MODE_ORDERAIRDATE, log
 from FileAccess import FileAccess
+from log import Log, LogInfo
 
 
 class PlaylistItem:
@@ -44,8 +45,6 @@ class PlaylistItem:
         self.episode = 0
         self.season = 0
 
-
-
     @classmethod
     def fromString(cls, line: str, line2: str = None):
         pl = cls()
@@ -56,8 +55,7 @@ class PlaylistItem:
         else:
             return pl
 
-
-    def toString( self) -> str:
+    def toString( self) -> str:             #todo: refactor to __ method ,         self.__repr__   self.__str__
         tmpstrR = str(self.duration) + ',' +  '//'.join([self.title, self.episodetitle, self.description])
         tmpstrR = tmpstrR[:1990]
 
@@ -66,7 +64,6 @@ class PlaylistItem:
 
         tmpstrR += '\n' + self.filename.replace("\\\\", "\\")
         return tmpstrR
-
 
     def loadString(self, line: str = None, line2: str = None) -> bool:
         if not line:
@@ -102,14 +99,14 @@ class PlaylistItem:
 
         return True
 
-class Playlist:
+
+class Playlist(LogInfo):
     def __init__(self, channel:int = None):
         self.itemlist: list[PlaylistItem] = []
         self.totalDuration = 0      #secs : int
         self.processingSemaphore = threading.BoundedSemaphore()
         self.filename = ''
         self.channel = channel
-
 
     def getduration(self, index):
         self.processingSemaphore.acquire()
@@ -122,15 +119,13 @@ class Playlist:
         self.processingSemaphore.release()
         return 0
 
-
     def size(self):
         self.processingSemaphore.acquire()
         totsize = len(self.itemlist)
         self.processingSemaphore.release()
         return totsize
 
-
-    def getfilename(self, index):
+        """def getfilename(self, index):
         self.processingSemaphore.acquire()
 
         if index >= 0 and index < len(self.itemlist):
@@ -140,7 +135,6 @@ class Playlist:
 
         self.processingSemaphore.release()
         return ''
-
 
     def getdescription(self, index):
         self.processingSemaphore.acquire()
@@ -153,7 +147,6 @@ class Playlist:
         self.processingSemaphore.release()
         return ''
 
-
     def getepisodetitle(self, index):
         self.processingSemaphore.acquire()
 
@@ -164,7 +157,6 @@ class Playlist:
 
         self.processingSemaphore.release()
         return ''
-
 
     def getplaycount(self, index):
         self.processingSemaphore.acquire()
@@ -177,23 +169,22 @@ class Playlist:
         self.processingSemaphore.release()
         return ''
 
-
     def getTitle(self, index):
         self.processingSemaphore.acquire()
 
         if index >= 0 and index < len(self.itemlist):
             title = self.itemlist[index].title
             self.processingSemaphore.release()
-            return title
+            return title 
 
         self.processingSemaphore.release()
-        return ''
-
-    def getItem(self, index):
+        return ''   """
+        
+    def __getitem__(self, key):
         self.processingSemaphore.acquire()
 
-        if index >= 0 and index < len(self.itemlist):
-            itemCopy = self.itemlist[index]
+        if key >= 0 and key < len(self.itemlist):
+            itemCopy = self.itemlist[key]
             self.processingSemaphore.release()
             return itemCopy
 
@@ -204,13 +195,9 @@ class Playlist:
         del self.itemlist[:]
         self.totalDuration = 0
 
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('script.pseudotv-Playlist: ' + msg, level)
-
     def load(self, filename):
         self.log("load " + filename)
-        self.filename = filename 
+        self.filename = filename
         self.processingSemaphore.acquire()
         self.clear()
 
@@ -221,7 +208,7 @@ class Playlist:
             self.processingSemaphore.release()
             return False
 
-        #load content
+        # load content
         try:
             lines = fle.readlines()
         except Exception as e:
@@ -232,14 +219,14 @@ class Playlist:
             fle.close()
 
         # find and read the header
-        realindex = next( (i for i in range(len(lines)) if lines[i].startswith('#EXTM3U')), -1)
-        if realindex == -1:
+        lineIterator = iter(lines)
+        realindex = next((line for line in lineIterator if line.startswith('#EXTM3U')), None)
+        if not realindex:
             self.log('Unable to find playlist header for the file: ' + filename)
             self.processingSemaphore.release()
             return False
 
         # past the header, so get the info
-        lineIterator = iter(lines[realindex + 1:])
         for line in lineIterator:
             if len(self.itemlist) > 16384:
                 break
@@ -266,7 +253,6 @@ class Playlist:
         self.filename = filename or self.filename
         try:
             fle = FileAccess.open(filename, 'w')
-            #fle = open(filename, 'w', encoding= 'utf-8') ####
         except:
             self.log("save Unable to open the smart playlist", xbmc.LOGERROR)
             return
@@ -319,7 +305,7 @@ class SmartPlaylist:
                 attrs = rule.attributes 
                 newRule = {'field': attrs['field'].value, 'operator': attrs['operator'].value}
                 newRule['value'] =  rule.firstChild.nodeValue if rule.firstChild else None
-                self.rules.append(newRule)#self.rules.append({'field': attrs['field'].value, 'operator': attrs['operator'].value, 'value': rule.firstChild.nodeValue or None})
+                self.rules.append(newRule)
 
             #todo:review adding support for grouping
             plOrder = dom.getElementsByTagName('order')
@@ -449,8 +435,10 @@ class SmartPlaylist:
         smartPl.type = pltype
 
         smartPl.addRule("genre", "is", genre)
-        if '-' in genre:
-            smartPl.addRule("genre", "is", genre.replace("-"," "))  ####
+        lAlternativeChars = ['-','/']
+        altenatives = [genre.replace(char," ") for char in lAlternativeChars if char in genre]
+        for alt in altenatives:
+            smartPl.addRule("genre", "is", alt)
             smartPl.match = 'one'
         smartPl.save()
         return smartPl

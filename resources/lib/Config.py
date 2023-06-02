@@ -24,6 +24,7 @@ import sys, re
 import random
 
 from Playlist import SmartPlaylist
+from log import Log
 
 
 ADDON       = xbmcaddon.Addon(id='script.pseudotv')
@@ -54,7 +55,7 @@ from FileAccess import FileAccess
 from Migrate import Migrate
 from contextlib import contextmanager
 
-NUMBER_CHANNEL_TYPES = 8
+NUMBER_CHANNEL_TYPES = 9
 
 @contextmanager
 def busy_dialog():
@@ -64,7 +65,9 @@ def busy_dialog():
     finally:
         xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
 
-class ConfigWindow(xbmcgui.WindowXMLDialog):
+class ConfigWindow(xbmcgui.WindowXMLDialog, Log):
+    __name__ = 'ChannelConfig'
+    
     def __init__(self, *args, **kwargs):
         self.log("__init__")
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
@@ -75,6 +78,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.setting1 = ''
         self.setting2 = ''
         self.savedRules = False
+        
 
         if CHANNEL_SHARING:
             realloc = ADDON.getSetting('SettingsFolder')
@@ -84,11 +88,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         ADDON_SETTINGS.disableWriteOnSave()
         self.doModal()
         self.log("__init__ return")
-
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('ChannelConfig: ' + msg, level)
-
 
     def onInit(self):
         self.log("onInit")
@@ -106,10 +105,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.myRules = AdvancedConfig("script.pseudotv.AdvancedConfig.xml", CWD, "default")
         self.log("onInit return")
 
-
     def onFocus(self, controlId):
         pass
-
 
     def onAction(self, act):
         action = act.getId()
@@ -159,42 +156,41 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def saveSettings(self):
         self.log("saveSettings channel " + str(self.channel))
         chantype = 9999
-        chan = str(self.channel)
+        chan = int(self.channel)
         set1 = ''
         set2 = ''
 
         try:
-            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + chan + "_type"))
+            chantype = int(ADDON_SETTINGS.getChannelSetting(chan, "type"))
         except:
             self.log("Unable to get channel type")
 
-        setting1 = "Channel_" + chan + "_1"
-        setting2 = "Channel_" + chan + "_2"
-
         if chantype == 0:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(130).getLabel2())
+            ADDON_SETTINGS.setChannelSetting(chan, '1',self.getControl(130).getLabel2())
         elif chantype == 1:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(142).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(142).getLabel())
         elif chantype == 2:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(152).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(152).getLabel())
         elif chantype == 3:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(162).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(162).getLabel())
         elif chantype == 4:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(172).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(172).getLabel())
         elif chantype == 5:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(182).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(182).getLabel())
         elif chantype == 6:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(192).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(192).getLabel())
 
             if self.getControl(194).isSelected():
-                ADDON_SETTINGS.setSetting(setting2, str(MODE_ORDERAIRDATE))
+                ADDON_SETTINGS.setChannelSetting(chan, '2', str(MODE_ORDERAIRDATE))
             else:
-                ADDON_SETTINGS.setSetting(setting2, "0")
+                ADDON_SETTINGS.setChannelSetting(chan, '2', "0")
         elif chantype == 7:
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(200).getLabel())
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(200).getLabel())
+        elif chantype == 8:
+            ADDON_SETTINGS.setChannelSetting(chan, '1', self.getControl(212).getLabel())
         elif chantype == 9999:
-            ADDON_SETTINGS.setSetting(setting1, '')
-            ADDON_SETTINGS.setSetting(setting2, '')
+            ADDON_SETTINGS.setChannelSetting(chan, '1', '')
+            ADDON_SETTINGS.setChannelSetting(chan, '2', '')
 
         if self.savedRules:
             self.saveRules(self.channel)
@@ -204,23 +200,21 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         set2 = ''
 
         try:
-            set1 = ADDON_SETTINGS.getSetting(setting1)
-            set2 = ADDON_SETTINGS.getSetting(setting2)
+            set1 = ADDON_SETTINGS.getChannelSetting(chan,'1')
+            set2 = ADDON_SETTINGS.getChannelSetting(chan, '2')
         except:
             pass
 
         if chantype != self.channel_type or set1 != self.setting1 or set2 != self.setting2 or self.savedRules:
             self.madeChanges = 1
-            ADDON_SETTINGS.setSetting('Channel_' + chan + '_changed', 'True')
+            ADDON_SETTINGS.setChannelSetting(chan, 'changed', 'True')
 
         self.log("saveSettings return")
 
-
     def cancelChan(self):
-        ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_type", str(self.channel_type))
-        ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_1", self.setting1)
-        ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_2", self.setting2)
-
+        ADDON_SETTINGS.setChannelSetting(self.channel, "type", str(self.channel_type))
+        ADDON_SETTINGS.setChannelSetting(self.channel, "1", self.setting1)
+        ADDON_SETTINGS.setChannelSetting(self.channel, "2", self.setting2)
 
     def hideChanDetails(self):
         self.getControl(106).setVisible(False)
@@ -236,7 +230,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.showingList = True
         self.updateListing(self.channel)
         self.listcontrol.selectItem(self.channel - 1)
-
 
     def onClick(self, controlId):
         self.log("onClick " + str(controlId))
@@ -255,9 +248,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
 
         elif controlId == 110 or controlId == 111 or controlId == 109:
-            ChannelTypeOptions = ("Custom Playlist", "TV Network", "Movie Studio", "TV Genre", "Movie Genre", "Mixed Genre", "TV Show", "Directory", "None")
+            ChannelTypeOptions = ("Custom Playlist", "TV Network", "Movie Studio", "TV Genre", "Movie Genre", "Mixed Genre", "TV Show", "Directory",  "Music Genre","None")
             ChannelType = xbmcgui.Dialog().select("Choose A Channel Type",ChannelTypeOptions)
-            if ChannelType == 8:
+            if ChannelType == 9:
                 ChannelType = 9999
             if ChannelType != -1:
                 self.setChanType(self.channel, ChannelType)
@@ -286,7 +279,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.ruleList = self.myRules.ruleList
                 self.savedRules = True
         elif controlId == 130:      # Playlist-type channel, playlist button
-            dlg = xbmcgui.Dialog()      #todo: review to use different browse options/ allow for browsing of other sources
+            dlg = xbmcgui.Dialog()
             retval = dlg.browse(1, "Channel " + str(self.channel) + " Playlist", "files", ".xsp", False, False, "special://videoplaylists/")
 
             if retval != "special://videoplaylists/":
@@ -316,6 +309,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             ListChoice = xbmcgui.Dialog().select("Choose A Genre", ListOptions)
             if ListChoice != -1:
                 self.setListData(self.mixedGenreList, 182, ListChoice)
+        elif controlId == 210 or controlId == 211:      # Music Genre channel # todo: test functionality
+            ListOptions = self.musicGenreList
+            ListChoice = xbmcgui.Dialog().select("Choose A Genre", ListOptions)
+            if ListChoice != -1:
+                self.setListData(self.musicGenreList, 212, ListChoice)
         elif controlId == 190 or controlId == 191:      # TV Show channel
             ListOptions = self.showList
             ListChoice = xbmcgui.Dialog().select("Choose A Genre", ListOptions)
@@ -330,59 +328,55 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         self.log("onClick return")
 
-    def copyChannel(self,origchannel,newchannel):
+    def copyChannel(self,origchannel: int,newchannel: int):
         self.log("copyChannel channel " + str(newchannel))
         chantype = 9999
-        chan = str(origchannel)
-        newchan = str(newchannel)
-        set1 = ''
-        set2 = ''
 
         try:
-            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + chan + "_type"))
+            chantype = int(ADDON_SETTINGS.getChannelSetting(origchannel,"type"))
             self.log("chantype: " + str(chantype))
 
         except:
             self.log("Unable to get channel type")
 
-        setting1 = "Channel_" + chan + "_1"
-        setting2 = "Channel_" + chan + "_2"
-        settingnewtype = "Channel_" + newchan + "_type"
-        settingnew1 = "Channel_" + newchan + "_1"
-        settingnew2 = "Channel_" + newchan + "_2"
+        setting1 = "Channel_" + origchannel + "_1"
+        setting2 = "Channel_" + origchannel + "_2"
+        settingnewtype = "Channel_" + newchannel + "_type"
+        settingnew1 = "Channel_" + newchannel + "_1"
+        settingnew2 = "Channel_" + newchannel + "_2"
 
         if chantype == 9999:
-            ADDON_SETTINGS.setSetting(setting1, '')
-            ADDON_SETTINGS.setSetting(setting2, '')
+            ADDON_SETTINGS.setChannelSetting(origchannel, '1', '')
+            ADDON_SETTINGS.setChannelSetting(origchannel, '2', '')
         elif chantype == 6:
-            oldval = ADDON_SETTINGS.getSetting(setting1)
-            oldval2 = ADDON_SETTINGS.getSetting(setting2)
-            ADDON_SETTINGS.setSetting(settingnewtype, str(chantype))
-            ADDON_SETTINGS.setSetting(settingnew1, oldval)
-            ADDON_SETTINGS.setSetting(settingnew2, oldval2)
+            oldval = ADDON_SETTINGS.getChannelSetting(origchannel, '1')
+            oldval2 = ADDON_SETTINGS.getChannelSetting(origchannel, '2')
+            ADDON_SETTINGS.setChannelSetting(newchannel, 'type', str(chantype))
+            ADDON_SETTINGS.setChannelSetting(newchannel, '1', oldval)
+            ADDON_SETTINGS.setChannelSetting(newchannel, '2', oldval2)
         else:
-            oldval = ADDON_SETTINGS.getSetting(setting1)
-            ADDON_SETTINGS.setSetting(settingnewtype, str(chantype))
-            ADDON_SETTINGS.setSetting(settingnew1, oldval)
+            oldval = ADDON_SETTINGS.getChannelSetting(origchannel, '1')
+            ADDON_SETTINGS.setChannelSetting(newchannel, 'type', str(chantype))
+            ADDON_SETTINGS.setChannelSetting(newchannel, '1', oldval)
         self.loadRules(origchannel)
-        self.saveRules(newchan)
-        ADDON_SETTINGS.setSetting('Channel_' + newchan + '_changed', 'True')
+        self.saveRules(newchannel)
+        ADDON_SETTINGS.setChannelSetting(newchannel, 'changed', 'True')
         self.madeChanges = 1
         self.updateListing(newchannel)
         self.log("copyChannel return")
 
     def clearChannel(self, curchan):
         self.log("clearChannel channel " + str(curchan))
-        ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_type", "9999")
-        ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_1", "")
-        ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_2", "")
+        ADDON_SETTINGS.setChannelSetting(curchan, "type", "9999")
+        ADDON_SETTINGS.setChannelSetting(curchan, "1", "")
+        ADDON_SETTINGS.setChannelSetting(curchan, "2", "")
         try:
-            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchan) + "_rulecount"))
+            rulecount = int(ADDON_SETTINGS.getChannelSetting(curchan, "rulecount"))
             self.log("rulecount: " + str(rulecount))
             for i in range(rulecount):
-                ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_rule_" + str(i) + "_id", "")
+                ADDON_SETTINGS.setChannelSetting(curchan, "rule_" + str(i) + "_id", "")
                 self.log("Channel_" + str(curchan) + "_rule_" + str(i) + "_id")
-            ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_rulecount", "0")
+            ADDON_SETTINGS.setChannelSetting(curchan, "rulecount", "0")
         except:
             pass
         self.updateListing(curchan)
@@ -420,13 +414,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         chantype = 9999
 
         try:
-            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_type"))
+            chantype = int(ADDON_SETTINGS.getChannelSetting(channel, "type"))
         except:
             self.log("Unable to get channel type")
 
         chantype = val
 
-        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_type", str(chantype))
+        ADDON_SETTINGS.setChannelSetting(channel, "type", str(chantype))
 
         for i in range(NUMBER_CHANNEL_TYPES):
             if i == chantype:
@@ -451,7 +445,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         chantype = 9999
 
         try:
-            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_type"))
+            chantype = int(ADDON_SETTINGS.getChannelSetting(channel, "type"))
         except:
             self.log("Unable to get channel type")
 
@@ -467,15 +461,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             elif chantype == NUMBER_CHANNEL_TYPES:
                 chantype = 9999
 
-            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_type", str(chantype))
+            ADDON_SETTINGS.setChannelSetting(channel, "type", str(chantype))
         else:
             self.channel_type = chantype
             self.setting1 = ''
             self.setting2 = ''
 
             try:
-                self.setting1 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")
-                self.setting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
+                self.setting1 = ADDON_SETTINGS.getChannelSetting(channel, "1")
+                self.setting2 = ADDON_SETTINGS.getChannelSetting(channel, "2")
             except:
                 pass
 
@@ -497,7 +491,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.fillInDetails(channel)
         self.log("changeChanType return")
 
-
     def fillInDetails(self, channel):
         self.log("fillInDetails " + str(channel))
         self.getControl(104).setLabel("Channel " + str(channel))
@@ -505,10 +498,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         chansetting1 = ''
         chansetting2 = ''
 
-        try:
-            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_type"))
-            chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")
-            chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
+        try:        #todo: review to refactor channel's settings loading logic/ this is repeated in many places
+            chantype = int(ADDON_SETTINGS.getChannelSetting(channel, "type"))
+            chansetting1 = ADDON_SETTINGS.getChannelSetting(channel, "1")
+            chansetting2 = ADDON_SETTINGS.getChannelSetting(channel, "2")
         except:
             self.log("Unable to get some setting")
 
@@ -543,7 +536,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 chansetting1 = ''
 
             self.getControl(200).setLabel(chansetting1)
-
+        elif chantype == 8:
+            self.getControl(210).setLabel(self.findItemInList(self.musicGenreList, chansetting1))
+            
         self.loadRules(channel)
         self.log("fillInDetails return")
 
@@ -554,15 +549,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.myRules.allRules
 
         try:
-            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+            rulecount = int(ADDON_SETTINGS.getChannelSetting(channel, 'rulecount'))
 
             for i in range(rulecount):
-                ruleid = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_id'))
+                ruleid = int(ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_id'))
                 rule = self.myRules.allRules.getRuleById(ruleid)
                 if rule:
                     self.ruleList.append(rule.copy())
                     for x in range(rule.getOptionCount()):
-                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_opt_' + str(x + 1))
+                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_opt_' + str(x + 1))
                     foundrule = True
         except:
             self.ruleList = []
@@ -571,7 +566,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("checkRules")
         rulecheck = False
         try:
-            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+            rulecount = int(ADDON_SETTINGS.getChannelSetting(channel, 'rulecount'))
             self.log("Channel " + str(channel) + "rulecount: " + str(rulecount))
             if rulecount > 0:
                rulecheck = True
@@ -582,14 +577,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def saveRules(self, channel):   #todo: refactor/duplicate code -> move to rules class
         self.log("saveRules")
         rulecount = len(self.ruleList)
-        ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_rulecount', str(rulecount))
+        ADDON_SETTINGS.setChannelSetting(channel, 'rulecount', str(rulecount))
         index = 1
 
         for rule in self.ruleList:
-            ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_rule_' + str(index) + '_id', str(rule.getId()))
+            ADDON_SETTINGS.setChannelSetting(channel, 'rule_' + str(index) + '_id', str(rule.getId()))
 
             for x in range(rule.getOptionCount()):
-                ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_rule_' + str(index) + '_opt_' + str(x + 1), rule.getOptionValue(x))
+                ADDON_SETTINGS.setChannelSetting(channel, 'rule_' + str(index) + '_opt_' + str(x + 1), rule.getOptionValue(x))
 
             index += 1
 
@@ -624,6 +619,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             return LANGUAGE(30187)
         elif chantype == 7:
             return LANGUAGE(30189)
+        elif chantype == 8:
+            return LANGUAGE(30201)
         elif chantype == 9999:
             return LANGUAGE(30164)
 
@@ -636,20 +633,21 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         chnlst = ChannelList()
         chnlst.fillTVInfo()
         chnlst.fillMovieInfo()
-        self.mixedGenreList = chnlst.makeMixedList(chnlst.showGenreList, chnlst.movieGenreList)
+        chnlst.fillMusicInfo()
+        self.mixedGenreList = chnlst.makeMixedList(chnlst.showGenreList, chnlst.movieGenreList, key=lambda x: x[0].lower())
         self.networkList = [n for n, c in chnlst.networkList]
         self.studioList = [n for n, c in chnlst.studioList]
         self.showGenreList = [n for n, c in chnlst.showGenreList]
         self.movieGenreList = [n for n, c in chnlst.movieGenreList]
         self.showList = [n for n, *c in chnlst.showList]
+        self.musicGenreList = [n for n, c in chnlst.musicGenreList]
 
         self.showList.sort()
-        self.mixedGenreList.sort(key=lambda x: x.lower())
         self.listcontrol = self.getControl(102)
 
-        for i in range(999):        ####refactor
+        for i in range(1,1000):        ####refactor maxChannels from settings
             theitem = xbmcgui.ListItem()
-            theitem.setLabel(str(i + 1))
+            theitem.setLabel(str(i))
             self.listcontrol.addItem(theitem)
 
         self.updateListing()
@@ -666,7 +664,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         for i in range(start, end):
             self.log(str(i))
             try:
-                chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i) + "_type"))
+                chantype = int(ADDON_SETTINGS.getChannelSetting(i, "type"))
                 if chantype == 9999 and i !=start:
                     return i
                     break
@@ -676,26 +674,21 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("findFirstEmpty return")
 
 
-    def updateListing(self, channel = -1): # refactor to use channelist method.
+    def updateListing(self, channel = None): # refactor to use channelist method.
         self.log("updateListing")
-        start = 0
-        end = 999
-
-        if channel > -1:
-            start = channel - 1
-            end = channel
-
+        start = channel or 1
+        end = channel or 1000
         for i in range(start, end):
-            theitem = self.listcontrol.getListItem(i)   #refactor the -1 channel offseting/listing item
+            theitem = self.listcontrol.getListItem(i-1)   # 0-indexe  #refactor the -1 channel offseting/listing item
             chantype = 9999
             chansetting1 = ''
             chansetting2 = ''
             newlabel = ''
 
             try:
-                chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
-                chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_1")
-                chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_2")
+                chantype = int(ADDON_SETTINGS.getChannelSetting(i, "type"))
+                chansetting1 = ADDON_SETTINGS.getChannelSetting(i, "1")
+                chansetting2 = ADDON_SETTINGS.getChannelSetting(i, "2")
             except:
                 pass
 

@@ -10,6 +10,7 @@
 		<setting id="ChannelSharing" type="bool" label="30015" default="false"/>
 		<setting id="SettingsFolder" subsetting="true" type="folder" source="auto" visible="eq(-1,true)" label="30013" default="" />
 		<setting id="AdultContent" type="bool" label="30191" default="false"/>
+		<setting id="AudioChannels" type="bool" label="30200" default="false"/>
 	</category>
 
 	<category label="30020">

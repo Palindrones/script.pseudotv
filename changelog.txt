@@ -1,3 +1,15 @@
+2.6.0 (Palindrones)
+ Added Music Genre Channels Feature
+ Code refactoring for readability
+    - created/implemented Log class
+    - refactored Migrate class
+    - refactoring Settings class
+    - pythonian changes across multiple classes
+
+ -fixes
+  -fixed bug causing crash on channel changing(changing player playlist)
+  -fixed bug on seeking forward on media when channel changed Overlay/waitForMediaPlaying method added
+
 2.5.2 (Palindrones)
  Working Nexus/Matrix version
   Fixed broken Rules Feature

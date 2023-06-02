@@ -127,3 +127,15 @@ ACTION_NUMBER_9 = 67
 ACTION_INVALID = 999
 ACTION_MOUSE_RIGHT_CLICK = 101 #Mouse Right Click
 CONTEXT_MENU = 117
+
+from enum import Enum   #todo: factor into code
+class ChannelType(Enum):    
+    PLAYLIST = 0
+    NETWORK = 1
+    STUDIO = 2
+    TVSHOW_GENRE = 3
+    MOVIE_GENRE = 4
+    MIX_GENRE = 5
+    TVSHOW = 6
+    DIRECTORY = 7
+    MUSIC_GENRE = 8

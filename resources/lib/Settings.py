@@ -20,11 +20,13 @@ import xbmc, xbmcaddon, xbmcvfs
 import sys, re, os
 import time, traceback
 import Globals
+from log import Log
 
 from FileAccess import FileLock, FileAccess
 from xml.dom.minidom import parse, parseString, Document
 
-class Settings:
+
+class Settings(Log):     #todo:refactor class to xml serialiazble object(xml2dict)
     currentSettings = {}
 
     def __init__(self):
@@ -51,6 +53,11 @@ class Settings:
                 name = setting.getAttribute("id")
                 value = setting.getAttribute("value")
 
+                #change name channel settings names to 0 padded values
+                if 'channel_' in name:
+                    _,chNumber,subName = 'name'.split('_',3)
+                    name = "Channel_%02d_%s" % (int(chNumber), subName)
+
                 if value:
                     self.currentSettings[name] = value
 
@@ -73,6 +80,9 @@ class Settings:
 
         return result
 
+    def getChannelSetting(self, channel: int, name, force = False):
+        name = "Channel_%02d_%s" % (channel, name)
+        return self.getSetting(name, force)
 
     def realGetSetting(self, name):
         self.log("realGetSetting - %s" % name)
@@ -88,6 +98,11 @@ class Settings:
         self.currentSettings[name] = value
         if self.alwaysWrite == 1:
             self.writeSettings()
+
+    def setChannelSetting(self, channel: int, name, value):
+        name = "Channel_%02d_%s" % (channel, name)
+        return self.setSetting(name, value)
+
 
 
     def writeSettings(self):
@@ -110,4 +125,3 @@ class Settings:
             self.log(traceback.format_exc(), xbmc.LOGERROR)
             fle.close()
             return
-

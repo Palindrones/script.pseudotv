@@ -26,19 +26,16 @@ import random
 from Globals import *
 from ChannelList import ChannelList
 from Rules import *
+from log import Log
 
 
 
-class AdvancedConfig(xbmcgui.WindowXMLDialog):
+class AdvancedConfig(xbmcgui.WindowXMLDialog, Log):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.ruleList = []
         self.allRules = RulesList()
-
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('AdvancedConfig: ' + msg, level)
 
 
     def onInit(self):
@@ -336,7 +333,6 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
 
         self.log("count is " + str(len(self.ruleList)))
 
-
     def setRuleControls(self, listindex):
         self.log("setRuleControls")
         self.selectedRuleIndex = listindex + self.listOffset
@@ -345,11 +341,6 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
         if self.selectedRuleIndex >= len(self.ruleList):
             self.ruleList.append(BaseRule())
 
-        strlen = len(self.getRuleName(self.selectedRuleIndex))
-        spacesstr = ''
-
-        for i in range(20 - int(strlen / 2)):
-            spacesstr += ' '
-
-        self.getControl(131).setLabel('<<' + spacesstr + self.getRuleName(self.selectedRuleIndex) + spacesstr + '>>')
+        label = '<<' + self.getRuleName(self.selectedRuleIndex).center(20) + '>>'
+        self.getControl(131).setLabel(label)
         self.setupOptions()

@@ -27,8 +27,9 @@ import random, traceback
 from ChannelList import ChannelList
 from Channel import Channel
 from Globals import *
+from log import Log
 
-class ChannelListThread(threading.Thread):
+class ChannelListThread(threading.Thread, Log):
     def __init__(self):
         from Overlay import TVOverlay
 
@@ -38,10 +39,6 @@ class ChannelListThread(threading.Thread):
         self.chanlist = ChannelList()
         self.paused = False
         self.fullUpdating = True
-
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('ChannelListThread: ' + msg, level)
 
 
     def run(self):
@@ -164,7 +161,7 @@ class ChannelListThread(threading.Thread):
                     iOverlayChannel = self.myOverlay.channels[iChannel] = self.chanlist.channels[iChannel]
 
                     if self.myOverlay.isMaster:
-                        ADDON_SETTINGS.setSetting('Channel_' + str(iChannel) + '_time', str(iOverlayChannel.totalTimePlayed))
+                        ADDON_SETTINGS.setChannelSetting(iChannel, 'time', str(iOverlayChannel.totalTimePlayed))
 
                     if iOverlayChannel.getTotalDuration() > curtotal and self.myOverlay.isMaster:
                         modified = True

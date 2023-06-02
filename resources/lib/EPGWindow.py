@@ -22,14 +22,13 @@ import subprocess, os
 import time, threading
 import datetime, traceback
 
-from Playlist import Playlist
 from Globals import *
-from Channel import Channel
 from FileAccess import FileAccess
 from Overlay import TVOverlay
+from log import Log
 
 
-class EPGWindow(xbmcgui.WindowXMLDialog):
+class EPGWindow(xbmcgui.WindowXMLDialog, Log):
     def __init__(self, *args, **kwargs):
         self.focusRow = 0
         self.focusIndex = 0
@@ -95,10 +94,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             now = now + delta
 
         self.log('setTimeLabels return')
-
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('EPGWindow: ' + msg, level)
 
 
     def onInit(self):

@@ -17,6 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from Globals    import *
+from log import Log
 from parsers    import MP4Parser
 from parsers    import AVIParser
 from parsers    import MKVParser
@@ -25,7 +26,7 @@ from parsers    import TSParser
 from parsers    import NFOParser
 from parsers    import VFSParser
  
-class VideoParser:
+class VideoParser(Log):
     def __init__(self):
         self.AVIExts   = ['.avi']
         self.MP4Exts   = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
@@ -37,13 +38,13 @@ class VideoParser:
 
 
     def getVideoLength(self, filename, fileItem={}, jsonRPC=None):
-        log("VideoParser: getVideoLength %s"%filename)
+        self.log("getVideoLength %s"%filename)
         if len(filename) == 0:
-            log("VideoParser: getVideoLength, No file name specified")
+            self.log("getVideoLength, No file name specified")
             return 0
 
         if FileAccess.exists(filename) == False:
-            log("VideoParser: getVideoLength, Unable to find the file")
+            self.log(" getVideoLength, Unable to find the file")
             return 0
 
         base, ext = os.path.splitext(filename)
@@ -64,13 +65,13 @@ class VideoParser:
         elif ext in self.STRMExts:
             self.parser = NFOParser.NFOParser()
         else:
-            log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
+            self.log("getVideoLength, No parser found for extension %s"%(ext))
             return 0
             
         duration = int(self.parser.determineLength(filename))
         if duration == 0 and not filename.startswith(tuple(self.VFSPaths)):
-            log("VideoParser: getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
+            self.log("getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
             self.parser = NFOParser.NFOParser()
             duration = int(self.parser.determineLength(filename))
-        log('VideoParser: getVideoLength, duration = %s'%(duration))
+        self.log('getVideoLength, duration = %s'%(duration))
         return duration

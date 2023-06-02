@@ -27,6 +27,8 @@ import random
 import json
 from heapq import nlargest
 
+from log import Log
+
 importlib.reload(sys)
 #sys.setdefaultencoding('utf-8')
 
@@ -38,13 +40,14 @@ from Channel import Channel
 from VideoParser import VideoParser
 from FileAccess import FileLock, FileAccess
 
-class ChannelList:
+class ChannelList(Log):
     def __init__(self):
         self.networkList = []
         self.studioList = []
         self.mixedGenreList = []
         self.showGenreList = []
         self.movieGenreList = []
+        self.musicGenreList = []
         self.showList = []
         self.channels: dict[int,Channel] = {}
         self.videoParser = VideoParser()
@@ -66,7 +69,7 @@ class ChannelList:
         self.log('Start Mode is ' + str(self.startMode))
         self.backgroundUpdating = int(ADDON.getSetting("ThreadMode"))
         self.mediaLimit = MEDIA_LIMIT[int(ADDON.getSetting("MediaLimit"))]
-        self.YearEpInfo = ADDON.getSetting('HideYearEpInfo')
+        self.hideYearEpInfo = ADDON.getSettingBool('HideYearEpInfo')
         self.findMaxChannels()
 
         if self.forceReset:
@@ -127,8 +130,6 @@ class ChannelList:
 
         return self.channels
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('ChannelList: ' + msg, level)
 
     # Determine the maximum number of channels by reading max channel in Settings file
     def findMaxChannels(self):
@@ -140,13 +141,13 @@ class ChannelList:
         try:
             settingChannels = [channel for channel in ADDON_SETTINGS.currentSettings.items() if '_type' in channel[0] ]
             for settingName, settingValue in settingChannels:
-                iChannel = int(settingName.replace("Channel_", "").replace("_type", ""))
+                iChannel = int(settingName.split('_')[1])
                 chtype = int(settingValue)
                 if iChannel > self.maxChannels:
                     self.maxChannels = iChannel
 
                 if self.forceReset and (chtype != 9999):
-                    ADDON_SETTINGS.setSetting(settingName.replace("_type", "_changed"), "True")
+                    ADDON_SETTINGS.setChannelSetting(iChannel, 'changed', "True") #ADDON_SETTINGS.setSetting(settingName.replace("_type", "_changed"), "True")
 
                 self.enteredChannelCount += 1
         except Exception as e:
@@ -168,13 +169,13 @@ class ChannelList:
         channelFilepath = CHANNELS_LOC + channelBaseName + '.m3u'
 
         try:
-            chtype = int(ADDON_SETTINGS.getSetting(channelBaseName + '_type'))
-            chsetting1 = ADDON_SETTINGS.getSetting(channelBaseName + '_1')
-            chsetting2 = ADDON_SETTINGS.getSetting(channelBaseName + '_2')
+            chtype = int(ADDON_SETTINGS.getChannelSetting(channelNumber, 'type'))
+            chsetting1 = ADDON_SETTINGS.getChannelSetting(channelNumber, '1')
+            chsetting2 = ADDON_SETTINGS.getChannelSetting(channelNumber, '2')
         except:
             pass
 
-        curChannel = self.channels.get(channelNumber, Channel())
+        curChannel:Channel = self.channels.get(channelNumber, Channel())
         if not channelNumber in self.channels:
             self.channels[channelNumber] = curChannel
 
@@ -187,7 +188,7 @@ class ChannelList:
         self.runActions(RULES_ACTION_START, channelNumber, curChannel)
 
         try:
-            needsreset = ADDON_SETTINGS.getSetting(channelBaseName + '_changed') == 'True'
+            needsreset = ADDON_SETTINGS.getChannelSetting(channelNumber, 'changed') == 'True'
 
             if needsreset:
                 curChannel.isSetup = False
@@ -199,8 +200,8 @@ class ChannelList:
         # Don't load if we need to reset anyway
         if FileAccess.exists(channelFilepath) and append == False and needsreset == False:
             try:
-                #self.channelsDic[channel].totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', True))
-                curChannel.totalTimePlayed = int(ADDON_SETTINGS.getSetting(channelBaseName + '_time', False))
+                #self.channelsDic[channel].totalTimePlayed = int(ADDON_SETTINGS.getChannelSetting(channelNumber, 'time', True))
+                curChannel.totalTimePlayed = int(ADDON_SETTINGS.getChannelSetting(channelNumber, 'time', False))
                 createlist = True
 
                 if not self.background:
@@ -247,7 +248,7 @@ class ChannelList:
                 append = False
 
                 if createlist:
-                    ADDON_SETTINGS.setSetting('LastResetTime', str(int(time.time())))
+                    ADDON_SETTINGS.setChannelSetting(channelNumber, 'LastResetTime', str(int(time.time())))
 
         if append is False:
             if chtype == 6 and chsetting2 == str(MODE_ORDERAIRDATE):
@@ -272,15 +273,17 @@ class ChannelList:
                     returnval = True
                     curChannel.fileName = channelFilepath
                     curChannel.isValid = True
+                    log( "Channel %i set to valid" % channelNumber, xbmc.LOGINFO)       ####
 
                     # Don't reset variables on an appending channel
                     if append is False:
                         curChannel.totalTimePlayed = 0
-                        ADDON_SETTINGS.setSetting(channelBaseName + '_time', '0')
+                        ADDON_SETTINGS.setChannelSetting(channelNumber, 'time', '0')
 
                         if needsreset:
-                            ADDON_SETTINGS.setSetting(channelBaseName + '_changed', 'False')
+                            ADDON_SETTINGS.setChannelSetting(channelNumber, 'changed', 'False')
                             curChannel.isSetup = True
+                else: log( "failed to setPlaylist for Channel %i" % channelNumber, xbmc.LOGINFO)       ####
 
         self.runActions(RULES_ACTION_BEFORE_CLEAR, channelNumber, curChannel)
 
@@ -351,8 +354,7 @@ class ChannelList:
                 else:
                     currentChannel.totalTimePlayed -= tottime
                     # Write this now so anything sharing the playlists will get the proper info
-                    ADDON_SETTINGS.setSetting(
-                        channelBaseName + '_time', str(currentChannel.totalTimePlayed))
+                    ADDON_SETTINGS.setChannelSetting( channelNumber, 'time', str(currentChannel.totalTimePlayed))
                     self.log('Removed first %d items from channel %s playlist' % (cutoffindex, currentChannel.name))
 
     @staticmethod
@@ -363,7 +365,7 @@ class ChannelList:
             return ''
 
         if chtype == 0:
-            return SmartPlaylist.getSmartPlaylistName(setting1)  ###
+            return SmartPlaylist.getSmartPlaylistName(setting1)
         elif chtype == 1 or chtype == 2 or chtype == 5 or chtype == 6:
             return setting1
         elif chtype == 3:
@@ -375,6 +377,8 @@ class ChannelList:
                 return os.path.split(setting1[:-1])[1]
             else:
                 return os.path.basename(setting1)
+        elif chtype == 8:
+            return setting1 + " Music"
 
         return ''
 
@@ -424,7 +428,8 @@ class ChannelList:
         if israndom:
             random.shuffle(fileList)
 
-        # trim new list
+        # trim new list #todo: refactor/ slicing auto trims/ doesnt raise on outbounds
+        self.log('makeChannelList: #itemlist from buildFilelist %d' %  len(fileList))
         lastIndex = min(len(fileList), 16384) if not append else min(
             16384 - self.channels[channelNumber].Playlist.size(), len(fileList))
         fileList = fileList[:lastIndex]
@@ -438,6 +443,7 @@ class ChannelList:
             self.channels[channelNumber].Playlist.itemlist = fileList
 
         # store to file
+        self.log('makeChannelList: #itemlist %d' %  len(self.channels[channelNumber].Playlist.itemlist))
         self.channels[channelNumber].Playlist.save(channelplaylistPath)
 
         self.log('makeChannelList return')
@@ -451,7 +457,10 @@ class ChannelList:
             if (not self.studioList or not self.movieGenreList) and  chtype in [2,4,5]:
                 self.log('chtype = %d: About to fill the movies info because the studio/genre list size is 0' % chtype)
                 self.fillMovieInfo()
-                                            
+            if not self.musicGenreList and chtype in [8]:
+                self.log('chtype = %d: About to fill the music info because the genre list size is 0' % chtype)
+                self.fillMusicInfo()
+    
             channelName = self.getChannelName(chtype, setting1)
             if chtype == 1:
                 return SmartPlaylist.createNetworkPlaylist(setting1, channelName)
@@ -463,13 +472,14 @@ class ChannelList:
                 return SmartPlaylist.createGenrePlaylist('movies', setting1, channelName)
             elif chtype == 5:
                 if not self.mixedGenreList:
-                    self.mixedGenreList = self.makeMixedList(self.showGenreList, self.movieGenreList)
-                    self.mixedGenreList.sort(key=lambda x: x.lower())
-
+                    self.mixedGenreList = self.makeMixedList(self.showGenreList, self.movieGenreList, key=lambda x: x[0].lower())
                 return SmartPlaylist.createGenreMixedPlaylist(setting1, channelName)
             elif chtype == 6:
                 return SmartPlaylist.createShowPlaylist(setting1, setting2, channelName)
-
+                        
+            elif chtype == 8:
+                return SmartPlaylist.createGenrePlaylist('songs', setting1, channelName)
+            
             self.log('makeTypePlaylists invalid channel type: ' + str(chtype))
             
         except Exception as ex:
@@ -526,9 +536,8 @@ class ChannelList:
         #todo: add medialimit and random logic/otherwise will alway used the 1st entries
         return fileList
 
-
     def fillTVInfo(self, sortbycount=False):
-        self.log("fillTVInfo")
+        self.log("fillTVInfo")      #todo : refactor VideoLibrary.GetGenres
         json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetTVShows", "params": {"properties":["studio", "genre","runtime"]}, "id": 1}'
 
         if not self.background:
@@ -593,7 +602,7 @@ class ChannelList:
     def fillMovieInfo(self, sortbycount = False):
         self.log("fillMovieInfo")
         studioList = []
-        json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["studio", "genre"]}, "id": 1}'
+        json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["studio", "genre"]}, "id": 1}' #todo : refactor VideoLibrary.GetGenres
         json_folder_detail = xbmc.executeJSONRPC(json_query)
         jsonObject = json.loads(json_folder_detail)
         if not self.background:
@@ -639,7 +648,7 @@ class ChannelList:
             maxcount = max(studioList, key=lambda item: item[1], default=['None',0])[1]
             studioList = nlargest(int(maxcount / 3), studioList, key=lambda e:e[1])
                 #trim to  all the lowest equal count items
-            self.log("studioList size after nLargest: " + str(len(studioList)) + " | maxCount value: " + str(maxcount))
+            #self.log("studioList size after nLargest: " + str(len(studioList)) + " | maxCount value: " + str(maxcount))
 
             bestmatch = studioList[int(maxcount / 4)][1]
             self.studioList = [x for x in studioList if  x[1] >= bestmatch]
@@ -659,20 +668,52 @@ class ChannelList:
 
         return
 
+    def fillMusicInfo(self, sortbycount = False):
+        self.log("fillMusicInfo")                
+        #get genres 
+        json_query = '{"jsonrpc": "2.0", "method": "AudioLibrary.GetGenres","id": 1}'        
+        json_folder_detail = xbmc.executeJSONRPC(json_query)
+        jsonObject = json.loads(json_folder_detail)        
+        genres = [ [igenre['label'], 1] for igenre in jsonObject["result"]["genres"]]
+        
+        #clean up genre list
+        lBadEntries = ['Unknown', 'Other']
+        genres = [ig for ig in genres if not any((True for ibg in lBadEntries if ibg in ig))]
 
-    def makeMixedList(self, list1, list2):
+        #get count from albums
+        json_query = '{"jsonrpc": "2.0", "method": "AudioLibrary.GetAlbums","params": {"properties":["genre"]},"id": 1}'
+        json_folder_detail = xbmc.executeJSONRPC(json_query)
+        jsonObject = json.loads(json_folder_detail)
+
+        for genreEntry in genres:
+            genreEntry[1] = sum([True for al in jsonObject["result"]["albums"] if genreEntry[0] in al['genre']])
+        
+        if not self.background:
+            self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % self.settingChannel, LANGUAGE(30202), LANGUAGE(30203)]))
+            
+        self.musicGenreList = genres                        
+        self.log("musicGenreList size: " + str(len(genres)))
+        self.log("musicGenreList genres: " + str(genres))
+
+    def makeMixedList(self, list1, list2, keepCounts: bool = False, key = None, reverse: bool = False, limit: int = -1):
         self.log("makeMixedList")
-        newlist = []
-        newlist = [i1[0] for i1 in list1 for i2 in list2 if i2[0] == i1[0] or i2[0].lower() == i1[0].lower() ] #refactor unions
+        newlist = [ [*i1,*i2[1:]] for i1 in list1 for i2 in list2 if i2[0] == i1[0] or i2[0].lower() == i1[0].lower() ] #refactor unions
+        if key:
+            newlist.sort(key=key, reverse=reverse)
+        if not keepCounts:
+            newlist = [i[0] for i in newlist]
+        if limit > 0:    
+            newlist = newlist[:limit]
         self.log("makeMixedList return " + str(newlist))
         return newlist
 
     def buildFileList(self, dir_name, channel):
-        self.log("buildFileList")
+        self.log("buildFileList - %s" % dir_name)
         fileList: list[PlaylistItem] = []
         seasoneplist = []
         filecount = 0
-        json_query = '{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "video", "properties":["duration","runtime","showtitle","plot","plotoutline","season","episode","year","lastplayed","playcount","resume"]}, "id": 1}' % (self.escapeDirJSON(dir_name))
+        json_query = '{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "video", "properties":["duration","runtime","showtitle","plot","plotoutline","season","episode","year","albumartist","album","track","lastplayed","playcount","resume"]}, "id": 1}' % (self.escapeDirJSON(dir_name))
+        self.log("buildFileList - jQuery : '%s'" % json_query)
 
         if not self.background:
             self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % self.settingChannel, LANGUAGE(30172), LANGUAGE(30179)]))
@@ -690,8 +731,7 @@ class ChannelList:
                 if fileInfo["file"]:
                     if(fileInfo["file"].endswith("/") or fileInfo["file"].endswith("\\")):   #if file entry is directory make recursive call and append result
                         fileList.extend(self.buildFileList(fileInfo["file"], channel))
-                    else:
-                        
+                    else:                        
                         fileInfo = self.runActions(RULES_ACTION_JSON, channel, fileInfo)
                         if not fileInfo:
                             continue
@@ -699,73 +739,71 @@ class ChannelList:
                         try:
                             dur         = fileInfo["duration"] if 'duration' in fileInfo != None and fileInfo["duration"] > 0 else fileInfo["runtime"] #####
                             title       = fileInfo["label"]
-                            showtitle   = fileInfo["showtitle"]
-                            plot        = fileInfo["plot"]
-                            plotoutline = fileInfo["plotoutline"]
+                            year        = fileInfo["year"]
+                            mediaType   = fileInfo['type']
+                            filename    = fileInfo["file"].replace("\\\\", "\\")
+                            id          = fileInfo["id"]
                             #values needed to reset watched status should be captured whether or not the setting is enabled, in case user changes setting later
                             playcount   = fileInfo["playcount"]
                             lastplayed  = fileInfo["lastplayed"]
-                            resumePosition = fileInfo["resume"]["position"]
-                            filename = fileInfo["file"].replace("\\\\", "\\")
-                            id = fileInfo["id"]
-                            
-                            #tv show info
-                            season = fileInfo["season"]
-                            episode = fileInfo["episode"]
-                            #movie info
-                            year = fileInfo["year"]
-
-                            if dur == 0:         #use duration value from tvshow profile
-                                try:
-                                    dur = next(x for x in self.showList if x[0] == showtitle )[2]       #todo: refactor? showlist logic
-                                    # dur = int(dur * .80 )                                             #reduce to account for commercial gaps
-                                    self.log("Duration value from TVShow profile")
-                                except Exception as e:
+                            resumePosition = fileInfo["resume"]["position"] if 'resume' in fileInfo else 0
+                                                        
+                            description = ''
+                            secondTitle = ''
+                            #tv show/movies info
+                            if mediaType in ['episode', 'movie']:
+                                showtitle   = fileInfo["showtitle"]
+                                plot        = fileInfo["plot"]
+                                plotoutline = fileInfo["plotoutline"]
+                                season = fileInfo["season"]
+                                episode = fileInfo["episode"]
+                                description = plotoutline or plot or LANGUAGE(30023)
+                                description = description.replace('//','').replace("\n", "")
+                                                                
+                                if dur == 0:         #use duration value from tvshow profile
                                     try:
+                                        if mediaType == 'episode':
+                                            dur = next(x for x in self.showList if x[0] == showtitle)[2]       #todo: refactor? showlist logic
+                                            # dur = int(dur * .80 )                                            #reduce to account for commercial gaps
+                                            self.log("Duration value from TVShow profile")
+                                        else:
+                                            dur = self.videoParser.getVideoLength(filename)
+                                            self.log("Duration value from Video file",xbmc.LOGINFO)                                            
+                                    except Exception as e:
                                         self.log(str(e))
-                                        self.log( json.dumps(fileInfo))
-
-                                        dur = self.videoParser.getVideoLength(filename)
-                                        self.log("Duration value from Video file",xbmc.LOGINFO)
-                                    except Exception as ie:
-                                        self.log(str(ie))
                                         continue
+                                
+                                swtitle = None
+                                if mediaType == 'episode':
+                                    sxexx =  '' if self.hideYearEpInfo else " (%dx%02d)" % (season,episode) #todo: review removing () on shows with (year) on title
+                                    swtitle = '"%s"%s' % ( title.split(". ", 1)[-1], sxexx)
+                                    title = showtitle
+                                secondTitle = swtitle or str(year)  or ''
 
+                            elif mediaType == 'music':
+                                album = fileInfo['album']
+                                artist = fileInfo['albumartist']
+                                track = fileInfo['track']
+                                description = "%s - %s - %02d.%s" %(artist, album, track, title)
+                                secondTitle = artist
+                                
                             if dur:
-                                #udpate status dialog
+                                #udpate status dialog           #todo: add music wording logic
                                 if not self.background:
                                     lastMessage = LANGUAGE(30176) % (len(fileList) + 1) if fileList else LANGUAGE(30175) % 1
                                     self.updateDialog.update(self.updateDialogProgress, '\n'.join([LANGUAGE(30168) % self.settingChannel, LANGUAGE(30172), lastMessage]))
 
-                                theplot = plotoutline or plot or  LANGUAGE(30023)
-                                theplot = theplot.replace('//','').replace("\n", "")
-                                # This is a TV show
-                                swtitle = None
-                                if showtitle:
-                                    if "." in title:
-                                        title = title.split(". ", 1)[1]
-                                    swtitle = ('"{}"'.format(title))
-                                    if episode and self.YearEpInfo == 'false':
-                                        sxexx = (' ({})'.format(str(season) + 'x' + str(episode)))
-                                        swtitle = swtitle + sxexx
-
-                                episodetitle = swtitle or str(year)  or ''
-                                plItem = PlaylistItem(dur, showtitle or title, theplot, id, filename, episodetitle,
+                                plItem = PlaylistItem(dur, title, description, id, filename, secondTitle,
                                                         playcount, resumePosition, lastplayed)
-                                plItem.episode = episode
-                                plItem.season = season
-
-                                if self.channels[channel].mode & MODE_ORDERAIRDATE:
+                                if mediaType == 'episode' and self.channels[channel].mode & MODE_ORDERAIRDATE:
+                                    plItem.episode = episode
+                                    plItem.season = season
                                     seasoneplist.append([str(season), str(episode), plItem])
                                 else:
                                     fileList.append(plItem)
-                                #print(plItem.toString())
 
                         except Exception as e:
                             self.log("json Internal.except:" + traceback.format_exc())
-
-                else:
-                    continue
         except Exception as e:
             self.log("json Object Exception:" + traceback.format_exc())
 
@@ -782,7 +820,6 @@ class ChannelList:
 
         self.log("buildFileList return")
         return fileList
-
 
     def buildMixedFileList(self, smartPlaylist: SmartPlaylist, channel):
         '''creates a mixed(movies and TV) filelist by executing each smartplaylist type idependently and

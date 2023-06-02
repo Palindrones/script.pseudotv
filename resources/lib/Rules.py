@@ -30,8 +30,9 @@ from Playlist import PlaylistItem
 from ChannelList import ChannelList
 from Overlay import TVOverlay
 from Channel import Channel
+from log import Log
 
-class BaseRule:
+class BaseRule(Log):
     def __init__(self):
         self.name = ""
         self.description = ""
@@ -93,10 +94,6 @@ class BaseRule:
 
     def copy(self):
         return BaseRule()
-
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log("Rule " + self.getTitle() + ": " + msg, level)
 
 
     def validate(self):
@@ -512,7 +509,7 @@ class ScheduleChannelRule(BaseRule):
         # Work backwards from the current ep and date to set the current date to today and proper ep
         if actionid == RULES_ACTION_FINAL_MADE and self.hasRun == False:
             curchan = channeldata.channelNumber
-            ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_lastscheduled', '0')
+            ADDON_SETTINGS.setChannelSetting(curchan, 'lastscheduled', '0')
 
             for rule in channeldata.ruleList:
                 if rule.getId() == self.myId:
@@ -568,7 +565,7 @@ class ScheduleChannelRule(BaseRule):
         self.hasRun = True
 
         try:
-            self.startIndex = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchan) + '_lastscheduled'))
+            self.startIndex = int(ADDON_SETTINGS.getChannelSetting(curchan, 'lastscheduled'))
         except:
             self.startIndex = 0
 
@@ -615,7 +612,7 @@ class ScheduleChannelRule(BaseRule):
                         if rule.nextScheduledTime < minimum.nextScheduledTime or minimum.nextScheduledTime == 0:
                             minimum = rule
 
-        ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_lastscheduled', str(newstart))
+        ADDON_SETTINGS.setChannelSetting(curchan, 'lastscheduled', str(newstart))
         # Write the channel playlist to a file
         channeldata.Playlist.save(CHANNELS_LOC + 'channel_' + str(curchan) + '.m3u')
 
@@ -688,8 +685,8 @@ class ScheduleChannelRule(BaseRule):
     def saveOptions(self, channeldata):
         curchan = channeldata.channelNumber
         curruleid = self.getRuleIndex(channeldata) + 1
-        ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rule_' + str(curruleid) + '_opt_5', self.optionValues[4])
-        ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rule_' + str(curruleid) + '_opt_6', self.optionValues[5])
+        ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid) + '_opt_5', self.optionValues[4])
+        ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid) + '_opt_6', self.optionValues[5])
 
 
     # Add a single show (or shows) to the channel at nextScheduledTime
@@ -991,7 +988,7 @@ class InterleaveChannel(BaseRule):
             startingep = currentChannel.fixPlaylistIndex(startingep) + 1
             # Write starting episode
             self.optionValues[2] = str(startingep)
-            ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rule_' + str(curruleid + 1) + '_opt_4', self.optionValues[2])
+            ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid + 1) + '_opt_4', self.optionValues[2])
             self.log("Done interleaving, new length is " + str(len(newfilelist)))
             return newfilelist
 
@@ -1187,15 +1184,15 @@ class SetResetTime(BaseRule):
             nextreset = rightnow
 
             try:
-                nextreset = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchan) + '_SetResetTime'))
+                nextreset = int(ADDON_SETTINGS.getChannelSetting(curchan, 'SetResetTime'))
             except:
                 pass
 
             if rightnow >= nextreset:
                 channeldata.isValid = False
-                ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_changed', 'True')
+                ADDON_SETTINGS.setChannelSetting(curchan, 'changed', 'True')
                 nextreset = rightnow + (60 * 60 * 24 * numdays)
-                ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_SetResetTime', str(nextreset))
+                ADDON_SETTINGS.setChannelSetting(curchan, 'SetResetTime', str(nextreset))
 
         return channeldata
 
@@ -1341,7 +1338,7 @@ class FilterAdultContent(BaseRule):
         return channeldata
 
 
-class RulesList:
+class RulesList:        #todo: refactor with dunder methods
     def __init__(self) -> object:
         self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(),
                          ForceResume(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime(), FilterAdultContent()]

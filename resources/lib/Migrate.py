@@ -18,17 +18,12 @@
 
 import os
 import xbmcaddon, xbmc, xbmcgui
-import Settings
 import Globals
 import ChannelList
+from log import Log, LogInfo
 
 
-
-class Migrate:
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        Globals.log('Migrate: ' + msg, level)
-
-
+class Migrate(LogInfo):
     def migrate(self):
         self.log("migration")
         curver = "0.0.0"
@@ -53,99 +48,43 @@ class Migrate:
 
         return True
 
-
     def initializeChannels(self):
         chanlist = ChannelList.ChannelList()
         chanlist.background = True
         chanlist.fillTVInfo(True)
         chanlist.fillMovieInfo(True)
         # Now create TV networks, followed by mixed genres, followed by TV genres, and finally movie genres
+        mixedlist = chanlist.makeMixedList(chanlist.showGenreList, chanlist.movieGenreList, key=lambda x: x[1] + x[2], reverse=True, keepCounts=True)
+        if mixedlist: 
+            mixedlist = list(filter( lambda x: x[1]>2, mixedlist))    #keep only genres with 3+ thshows
+            mixedlist = [ [ig[0], ig[1]+ ig[2]] for ig in mixedlist]  #2nd index sum of counts
+                #remove used genre from their corresponding lists
+            mmgenre = [ig[0] for ig in mixedlist]
+            chanlist.showGenreList = [iG for iG in chanlist.showGenreList if iG[0] not in mmgenre]
+            chanlist.movieGenreList = [iG for iG in chanlist.movieGenreList if iG[0] not in mmgenre]
+                                    
         currentchan = 1
-        mixedlist = []
-
-        for item in chanlist.showGenreList:
-            curitem = item[0].lower()
-
-            for a in chanlist.movieGenreList:
-                if curitem == a[0].lower():
-                    mixedlist.append([item[0], item[1], a[1]])
-                    break
-
-        mixedlist.sort(key=lambda x: x[1] + x[2], reverse=True)
         currentchan = self.initialAddChannels(chanlist.networkList, 1, currentchan)
-
-        # Mixed genres
-        if len(mixedlist) > 0:
-            added = 0.0
-
-            for item in mixedlist:
-                if item[1] > 2 and item[2] > 1:
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(currentchan) + "_type", "5")
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(currentchan) + "_1", item[0])
-                    added += 1.0
-                    currentchan += 1
-                    itemlow = item[0].lower()
-
-                    # Remove that genre from the shows genre list
-                    for i in range(len(chanlist.showGenreList)):
-                        if itemlow == chanlist.showGenreList[i][0].lower():
-                            chanlist.showGenreList.pop(i)
-                            break
-
-                    # Remove that genre from the movie genre list
-                    for i in range(len(chanlist.movieGenreList)):
-                        if itemlow == chanlist.movieGenreList[i][0].lower():
-                            chanlist.movieGenreList.pop(i)
-                            break
-
-                    if added > 10:
-                        break
-
+        currentchan = self.initialAddChannels(mixedlist, 5, currentchan)
         currentchan = self.initialAddChannels(chanlist.showGenreList, 3, currentchan)
         currentchan = self.initialAddChannels(chanlist.movieGenreList, 4, currentchan)
-
+        if Globals.ADDON_SETTINGS.getSetting("AudioChannels") == "true":
+            chanlist.fillMusicInfo(True)
+            currentchan = self.initialAddChannels(chanlist.musicGenreList, 8, currentchan)
+            
         if currentchan > 1:
             return True
 
         return False
-
-
+    
+    '''creates channels settings from thelist array that meet the lowerlimit  upto 11 channels
+    thelist: 2d array with count# on index 1 decending ordered'''
     def initialAddChannels(self, thelist, chantype, currentchan):
-        if len(thelist) > 0:
-            counted = 0
-            lastitem = 0
-            curchancount = 1
-            lowerlimit = 1
-            lowlimitcnt = 0
-
-            for item in thelist:
-                if item[1] > lowerlimit:
-                    if item[1] != lastitem:
-                        if curchancount + counted <= 10 or counted == 0:
-                            counted += curchancount
-                            curchancount = 1
-                            lastitem = item[1]
-                        else:
-                            break
-                    else:
-                        curchancount += 1
-
-                    lowlimitcnt += 1
-
-                    if lowlimitcnt == 3:
-                        lowlimitcnt = 0
-                        lowerlimit += 1
-                else:
-                    break
-
-            if counted > 0:
-                for item in thelist:
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(currentchan) + "_type", str(chantype))
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(currentchan) + "_1", item[0])
-                    counted -= 1
-                    currentchan += 1
-
-                    if counted == 0:
-                        break
-
+        lowerlimit = 1
+        if thelist and thelist[0][1] > lowerlimit:
+            thelist = sorted(thelist[:11])         #trim and then sort to alphabetical(keep sort?)
+            for item in  thelist:
+                Globals.ADDON_SETTINGS.setChannelSetting(currentchan, "type", str(chantype))
+                Globals.ADDON_SETTINGS.setChannelSetting(currentchan, "1", item[0])
+                currentchan += 1                                
         return currentchan

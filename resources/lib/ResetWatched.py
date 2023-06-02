@@ -27,8 +27,9 @@ from Playlist import Playlist, PlaylistItem
 from Globals import *
 from Channel import Channel
 from FileAccess import FileLock, FileAccess
+from log import Log
 
-class ResetWatched:
+class ResetWatched(Log):
     def __init__(self, channels: dict[int, Channel] = {}):
         self.channels: dict[int, Channel] = channels
         self.processingSemaphore = threading.BoundedSemaphore()
@@ -136,6 +137,3 @@ class ResetWatched:
 
     def Resetter(self):
         self.resetChannels()
-
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('ResetWatched: ' + msg, level)
