@@ -3,7 +3,7 @@
 	<controls>
 		<!--HEADER-->
 		<control type="group">
-			<visible>Player.HasVideo + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.IsTempo]</visible>
+			<visible>Player.HasMedia + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.IsTempo]</visible>
 			<control type="image">
 				<left>0</left>
 				<top>0</top>
@@ -90,7 +90,7 @@
 			<width>1920</width>
 			<height>520</height>
 			<texture>ptv_LogoBack.png</texture>
-			<visible>Player.HasVideo + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.DisplayAfterSeek | Player.IsTempo]</visible>
+			<visible>Player.HasMedia + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.DisplayAfterSeek | Player.IsTempo]</visible>
 		</control>
 		<!--TIME INFO-->
 		<control type="group">
@@ -460,7 +460,7 @@
 		</control>
 		<!--SELECTED INFO-->
 		<control type="group">
-			<visible>Player.HasVideo + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.IsTempo]</visible>
+			<visible>Player.HasMedia + !Window.IsActive(videoosd) + ![Player.Seeking | Player.Paused | Player.Forwarding | Player.Rewinding | Player.IsTempo]</visible>
 			<control type="fadelabel">
 				<description>Show Title Label</description>
 				<left>30</left>

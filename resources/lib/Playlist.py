@@ -17,15 +17,14 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import xbmcgui, xbmc, xbmcvfs
+import xbmc, xbmcvfs
 import threading
-import time
 import traceback
 
 from xml.dom.minidom import *#parse, parseString
 from Globals import ADDON, GEN_CHAN_LOC, LANGUAGE, MEDIA_LIMIT, MODE_ORDERAIRDATE, log
 from FileAccess import FileAccess
-from log import Log, LogInfo
+from log import Log
 
 
 class PlaylistItem:
@@ -100,7 +99,7 @@ class PlaylistItem:
         return True
 
 
-class Playlist(LogInfo):
+class Playlist(Log):
     def __init__(self, channel:int = None):
         self.itemlist: list[PlaylistItem] = []
         self.totalDuration = 0      #secs : int
@@ -269,7 +268,7 @@ class Playlist(LogInfo):
 
 class SmartPlaylist:
     def __init__(self, filePath: str, load: bool = True) -> None:
-        self.mediaLimit = MEDIA_LIMIT[int(ADDON.getSetting("MediaLimit"))]
+        self.mediaLimit = MEDIA_LIMIT[ADDON.getSettingInt("MediaLimit")]
         self.filePath =  xbmcvfs.translatePath(filePath)
         self.rules: list[dict] = []
         self.name = ''

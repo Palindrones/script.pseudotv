@@ -18,45 +18,45 @@
 
 from __future__ import annotations
 from typing import Optional
-import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
-import time, threading
+import xbmc
+import xbmcgui
+import xbmcaddon
+import subprocess
+import os
+import time
+import threading
 import datetime
-import sys, re
+import sys
+import re
 import random
 
 from Globals import *
 from Playlist import PlaylistItem
-from ChannelList import ChannelList
-from Overlay import TVOverlay
 from Channel import Channel
+from Settings import ChannelSettings
 from log import Log
+
 
 class BaseRule(Log):
     def __init__(self):
-        self.name = ""
+        self.name = "None"
         self.description = ""
         self.optionLabels = []
         self.optionValues = []
         self.myId = 0
         self.actions = 0
 
-
     def getName(self):
         return self.name
-
 
     def getTitle(self):
         return self.name
 
-
     def getOptionCount(self):
         return len(self.optionLabels)
 
-
     def onAction(self, act, optionindex):
         return ''
-
 
     def getOptionLabel(self, index):
         if index >= 0 and index < self.getOptionCount():
@@ -64,13 +64,11 @@ class BaseRule(Log):
 
         return ''
 
-
     def getOptionValue(self, index):
         if index >= 0 and index < len(self.optionValues):
             return self.optionValues[index]
 
         return ''
-
 
     def getRuleIndex(self, channeldata):
         index = 0
@@ -83,31 +81,24 @@ class BaseRule(Log):
 
         return -1
 
-
     def getId(self):
         return self.myId
-
 
     def runAction(self, actionid, channelList: ChannelList, param):
         return param
 
-
     def copy(self):
         return BaseRule()
-
 
     def validate(self):
         pass
 
-
     def reset(self):
         self.__init__()
-
 
     def validateTextBox(self, optionindex, length):
         if len(self.optionValues[optionindex]) > length:
             self.optionValues[optionindex] = self.optionValues[optionindex][:length]
-
 
     def onActionTextBox(self, act, optionindex):
         action = act.getId()
@@ -150,7 +141,6 @@ class BaseRule(Log):
             self.log("shutdown window is visible")
             xbmc.executebuiltin("Dialog.close(10111)")
 
-
     def onActionDateBox(self, act, optionindex):
         self.log("onActionDateBox")
 
@@ -160,7 +150,6 @@ class BaseRule(Log):
 
             if info != None:
                 self.optionValues[optionindex] = info
-
 
     def onActionTimeBox(self, act, optionindex):
         self.log("onActionTimeBox")
@@ -209,7 +198,6 @@ class BaseRule(Log):
 
                 self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
 
-
     def validateTimeBox(self, optionindex):
         values = []
         broken = False
@@ -237,7 +225,6 @@ class BaseRule(Log):
             self.optionValues[optionindex] = "00:00"
             return
 
-
     def onActionSelectBox(self, act, optionindex):
         if act.getId() == ACTION_SELECT_ITEM or act.getId() == ACTION_SELECT_ITEM2:
             optioncount = len(self.selectBoxOptions[optionindex])
@@ -254,7 +241,6 @@ class BaseRule(Log):
                 cursel = 0
 
             self.optionValues[optionindex] = self.selectBoxOptions[optionindex][cursel]
-
 
     def onActionDaysofWeekBox(self, act, optionindex):
         self.log("onActionDaysofWeekBox")
@@ -282,7 +268,8 @@ class BaseRule(Log):
                 loc = self.optionValues[optionindex].find(chr(button))
 
                 if loc != -1:
-                    self.optionValues[optionindex] = self.optionValues[optionindex][:loc] + self.optionValues[optionindex][loc + 1:]
+                    self.optionValues[optionindex] = self.optionValues[optionindex][:loc] + \
+                        self.optionValues[optionindex][loc + 1:]
                 else:
                     self.optionValues[optionindex] += chr(button)
 
@@ -294,7 +281,6 @@ class BaseRule(Log):
         if xbmc.getCondVisibility("Window.IsVisible(10111)"):
             self.log("shutdown window is visible")
             xbmc.executebuiltin("Dialog.close(10111)")
-
 
     def validateDaysofWeekBox(self, optionindex):
         self.log("validateDaysofWeekBox")
@@ -308,7 +294,6 @@ class BaseRule(Log):
                 newstr += day
 
         self.optionValues[optionindex] = newstr
-
 
     def validateDigitBox(self, optionindex, minimum, maximum, default):
         if len(self.optionValues[optionindex]) == 0:
@@ -325,7 +310,6 @@ class BaseRule(Log):
             pass
 
         self.optionValues[optionindex] = str(default)
-
 
     def onActionDigitBox(self, act, optionindex):
         action = act.getId()
@@ -353,7 +337,6 @@ class BaseRule(Log):
             self.optionValues[optionindex] = ''
 
 
-
 class RenameRule(BaseRule):
     def __init__(self):
         self.name = LANGUAGE(30050)
@@ -362,10 +345,8 @@ class RenameRule(BaseRule):
         self.myId = 1
         self.actions = RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
 
-
     def copy(self):
         return RenameRule()
-
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
@@ -373,16 +354,13 @@ class RenameRule(BaseRule):
 
         return self.name
 
-
     def onAction(self, act, optionindex):
         self.onActionTextBox(act, optionindex)
         self.validate()
         return self.optionValues[optionindex]
 
-
     def validate(self):
         self.validateTextBox(0, 18)
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
@@ -390,7 +368,6 @@ class RenameRule(BaseRule):
             channeldata.name = self.optionValues[0]
 
         return channeldata
-
 
 
 class NoShowRule(BaseRule):
@@ -401,10 +378,8 @@ class NoShowRule(BaseRule):
         self.myId = 2
         self.actions = RULES_ACTION_LIST
 
-
     def copy(self):
         return NoShowRule()
-
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
@@ -412,16 +387,13 @@ class NoShowRule(BaseRule):
 
         return self.name
 
-
     def onAction(self, act, optionindex):
         self.onActionTextBox(act, optionindex)
         self.validate()
         return self.optionValues[optionindex]
 
-
     def validate(self):
         self.validateTextBox(0, 20)
-
 
     def runAction(self, actionid, channelList: ChannelList, filelist: list[PlaylistItem]):
         if actionid == RULES_ACTION_LIST:
@@ -432,11 +404,11 @@ class NoShowRule(BaseRule):
         return filelist
 
 
-
 class ScheduleChannelRule(BaseRule):
     def __init__(self):
         self.name = LANGUAGE(30056)
-        self.optionLabels = [LANGUAGE(30057), LANGUAGE(30058), LANGUAGE(30059), LANGUAGE(30060), LANGUAGE(30061), LANGUAGE(30062)]
+        self.optionLabels = [LANGUAGE(30057), LANGUAGE(30058), LANGUAGE(
+            30059), LANGUAGE(30060), LANGUAGE(30061), LANGUAGE(30062)]
         self.optionValues = ['0', '', '00:00', '1', '1', '']
         self.myId = 3
         self.actions = RULES_ACTION_START | RULES_ACTION_BEFORE_CLEAR | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
@@ -446,17 +418,14 @@ class ScheduleChannelRule(BaseRule):
         self.nextScheduledTime = 0
         self.startIndex = 0
 
-
     def copy(self):
         return ScheduleChannelRule()
-
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
             return LANGUAGE(30063) + " " + self.optionValues[0]
 
         return self.name
-
 
     def onAction(self, act, optionindex):
         if optionindex == 0:
@@ -480,14 +449,12 @@ class ScheduleChannelRule(BaseRule):
         self.validate()
         return self.optionValues[optionindex]
 
-
     def validate(self):
         self.validateDigitBox(0, 1, 1000, '')
         self.validateDaysofWeekBox(1)
         self.validateTimeBox(2)
         self.validateDigitBox(3, 1, 1000, 1)
         self.validateDigitBox(4, 1, 1000, 1)
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         self.log("runAction " + str(actionid))
@@ -509,7 +476,7 @@ class ScheduleChannelRule(BaseRule):
         # Work backwards from the current ep and date to set the current date to today and proper ep
         if actionid == RULES_ACTION_FINAL_MADE and self.hasRun == False:
             curchan = channeldata.channelNumber
-            ADDON_SETTINGS.setChannelSetting(curchan, 'lastscheduled', '0')
+            ADDON_SETTINGS.Channels[curchan].lastscheduled = 0
 
             for rule in channeldata.ruleList:
                 if rule.getId() == self.myId:
@@ -521,13 +488,13 @@ class ScheduleChannelRule(BaseRule):
 
         return channeldata
 
-
     def reverseStartingEpisode(self, channeldata):
         self.log("reverseStartingEpisode")
         tmpdate = 0
 
         try:
-            tmpdate = time.mktime(time.strptime(self.optionValues[5] + " " + self.optionValues[2], "%d/%m/%Y %H:%M"))
+            tmpdate = time.mktime(time.strptime(
+                self.optionValues[5] + " " + self.optionValues[2], "%d/%m/%Y %H:%M"))
         except:
             pass
 
@@ -558,14 +525,14 @@ class ScheduleChannelRule(BaseRule):
             except:
                 pass
 
-
     def runSchedulingRules(self, channelList: ChannelList, channeldata: Channel):
         self.log("runSchedulingRules")
         curchan = channelList.runningActionChannel
         self.hasRun = True
 
         try:
-            self.startIndex = int(ADDON_SETTINGS.getChannelSetting(curchan, 'lastscheduled'))
+            settings = ADDON_SETTINGS.getChannelSettings(curchan)
+            self.startIndex = int(settings.lastscheduled)
         except:
             self.startIndex = 0
 
@@ -612,12 +579,12 @@ class ScheduleChannelRule(BaseRule):
                         if rule.nextScheduledTime < minimum.nextScheduledTime or minimum.nextScheduledTime == 0:
                             minimum = rule
 
-        ADDON_SETTINGS.setChannelSetting(curchan, 'lastscheduled', str(newstart))
+        ADDON_SETTINGS.Channels[curchan].lastscheduled = newstart
         # Write the channel playlist to a file
         channeldata.Playlist.save(CHANNELS_LOC + 'channel_' + str(curchan) + '.m3u')
 
-
     # Fill in nextScheduledTime
+
     def determineNextTime(self):
         self.optionValues[5] = self.optionValues[5].replace(' ', '0')
         self.log("determineNextTime " + self.optionValues[5] + " " + self.optionValues[2])
@@ -631,7 +598,8 @@ class ScheduleChannelRule(BaseRule):
 
         try:
             # This is how it should be, but there is a bug in XBMC preventing this
-            starttime = time.mktime(time.strptime(self.optionValues[5] + " " + self.optionValues[2], "%d/%m/%Y %H:%M"))
+            starttime = time.mktime(time.strptime(
+                self.optionValues[5] + " " + self.optionValues[2], "%d/%m/%Y %H:%M"))
         except:
             self.log("Invalid date or time")
             self.nextScheduledTime = 0
@@ -681,13 +649,13 @@ class ScheduleChannelRule(BaseRule):
 
         self.nextScheduledTime = int(time.mktime(thedate.timetuple()))
 
-
     def saveOptions(self, channeldata):
         curchan = channeldata.channelNumber
         curruleid = self.getRuleIndex(channeldata) + 1
-        ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid) + '_opt_5', self.optionValues[4])
-        ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid) + '_opt_6', self.optionValues[5])
-
+        curSettings = ADDON_SETTINGS.getChannelSettings(curchan)
+        curSettings.rules[curruleid]['opt_5'] = self.optionValues[4]
+        curSettings.rules[curruleid]['opt_6'] = self.optionValues[5]
+        ADDON_SETTINGS.setChannelSettings(curchan, curSettings)
 
     # Add a single show (or shows) to the channel at nextScheduledTime
     # This needs to modify the startIndex value if something is added
@@ -710,7 +678,6 @@ class ScheduleChannelRule(BaseRule):
         except:
             self.log("Failed to load channel-rule options values")
             return False
-
 
         if startingep < 0:
             startingep = 0
@@ -803,7 +770,6 @@ class ScheduleChannelRule(BaseRule):
         self.log("successfully scheduled at index " + str(self.startIndex))
         return True
 
-
     def rearrangeShows(self, showindex, timedif, channeldata, channelList: ChannelList):
         self.log("rearrangeShows " + str(showindex) + " " + str(timedif))
         self.log("start index: " + str(self.startIndex) + ", end index: " + str(showindex))
@@ -836,7 +802,8 @@ class ScheduleChannelRule(BaseRule):
 
         # swap curindex with inx
         if matchdur < abs(timedif):
-            self.log("Found with a new timedif of " + str(matchdur) + "!  Swapping " + str(matchidxa) + " with " + str(matchidxb))
+            self.log("Found with a new timedif of " + str(matchdur) +
+                     "!  Swapping " + str(matchidxa) + " with " + str(matchidxb))
             plitema = channeldata.Playlist.itemlist[matchidxa]
             plitemb = channeldata.Playlist.itemlist[matchidxb]
             channeldata.Playlist.itemlist[matchidxa] = plitemb
@@ -847,8 +814,7 @@ class ScheduleChannelRule(BaseRule):
         return timedif
 
 
-
-class OnlyWatchedRule(BaseRule):    #todo: move rule action to RULES_ACTION_LIST
+class OnlyWatchedRule(BaseRule):  # todo: move rule action to RULES_ACTION_LIST
     def __init__(self):
         self.name = LANGUAGE(30064)
         self.optionLabels = []
@@ -856,10 +822,8 @@ class OnlyWatchedRule(BaseRule):    #todo: move rule action to RULES_ACTION_LIST
         self.myId = 4
         self.actions = RULES_ACTION_JSON
 
-
     def copy(self):
         return OnlyWatchedRule()
-
 
     def runAction(self, actionid, channelList: ChannelList, filedata):
         if actionid == RULES_ACTION_JSON:
@@ -870,7 +834,6 @@ class OnlyWatchedRule(BaseRule):    #todo: move rule action to RULES_ACTION_LIST
         return filedata
 
 
-
 class DontAddChannel(BaseRule):
     def __init__(self):
         self.name = LANGUAGE(30065)
@@ -879,17 +842,14 @@ class DontAddChannel(BaseRule):
         self.myId = 5
         self.actions = RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
 
-
     def copy(self):
         return DontAddChannel()
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
             channeldata.isValid = False
 
         return channeldata
-
 
 
 class InterleaveChannel(BaseRule):
@@ -900,10 +860,8 @@ class InterleaveChannel(BaseRule):
         self.myId = 6
         self.actions = RULES_ACTION_LIST
 
-
     def copy(self):
         return InterleaveChannel()
-
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
@@ -911,19 +869,16 @@ class InterleaveChannel(BaseRule):
 
         return self.name
 
-
     def onAction(self, act, optionindex):
         self.onActionDigitBox(act, optionindex)
         self.validate()
         return self.optionValues[optionindex]
-
 
     def validate(self):
         self.validateDigitBox(0, 1, 1000, 0)
         self.validateDigitBox(1, 1, 100, 1)
         self.validateDigitBox(2, 1, 100, 1)
         self.validateDigitBox(3, 1, 10000, 1)
-
 
     def runAction(self, actionid, channelList: ChannelList, filelist: list[PlaylistItem]):
         if actionid == RULES_ACTION_LIST:
@@ -973,7 +928,7 @@ class InterleaveChannel(BaseRule):
                 if channelList.threadPause() == False:
                     return filelist
 
-                while startindex < realindex:       #todo: refactor with list splice
+                while startindex < realindex:  # todo: refactor with list splice
                     newfilelist.append(filelist[startindex])
                     startindex += 1
                 newItem = currentChannel.getItem(startingep - 1)
@@ -981,19 +936,21 @@ class InterleaveChannel(BaseRule):
                 realindex += random.randint(minint, maxint)
                 startingep += 1
 
-            while startindex < len(filelist):        #todo: refactor with list splices
+            while startindex < len(filelist):  # todo: refactor with list splices
                 newfilelist.append(filelist[startindex])
                 startindex += 1
 
             startingep = currentChannel.fixPlaylistIndex(startingep) + 1
             # Write starting episode
             self.optionValues[2] = str(startingep)
-            ADDON_SETTINGS.setChannelSetting(curchan, 'rule_' + str(curruleid + 1) + '_opt_4', self.optionValues[2])
+            curSettings = ADDON_SETTINGS.getChannelSettings(curchan)
+            curSettings.rules[curruleid+1]['opt_4'] = self.optionValues[2]
+            ADDON_SETTINGS.setChannelSettings(curchan, curSettings)
+
             self.log("Done interleaving, new length is " + str(len(newfilelist)))
             return newfilelist
 
         return filelist
-
 
 
 class ForceRealTime(BaseRule):
@@ -1004,10 +961,8 @@ class ForceRealTime(BaseRule):
         self.myId = 7
         self.actions = RULES_ACTION_BEFORE_TIME
 
-
     def copy(self):
         return ForceRealTime()
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_BEFORE_TIME:
@@ -1015,7 +970,6 @@ class ForceRealTime(BaseRule):
             channeldata.mode |= MODE_REALTIME
 
         return channeldata
-
 
 
 class AlwaysPause(BaseRule):
@@ -1026,10 +980,8 @@ class AlwaysPause(BaseRule):
         self.myId = 8
         self.actions = RULES_ACTION_BEFORE_TIME
 
-
     def copy(self):
         return AlwaysPause()
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_BEFORE_TIME:
@@ -1046,10 +998,8 @@ class ForceResume(BaseRule):
         self.myId = 9
         self.actions = RULES_ACTION_BEFORE_TIME
 
-
     def copy(self):
         return ForceResume()
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_BEFORE_TIME:
@@ -1057,7 +1007,6 @@ class ForceResume(BaseRule):
             channeldata.mode |= MODE_RESUME
 
         return channeldata
-
 
 
 class ForceRandom(BaseRule):
@@ -1068,10 +1017,8 @@ class ForceRandom(BaseRule):
         self.myId = 10
         self.actions = RULES_ACTION_BEFORE_TIME
 
-
     def copy(self):
         return ForceRandom()
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_BEFORE_TIME:
@@ -1079,7 +1026,6 @@ class ForceRandom(BaseRule):
             channeldata.mode |= MODE_RANDOM
 
         return channeldata
-
 
 
 class OnlyUnWatchedRule(BaseRule):
@@ -1090,10 +1036,8 @@ class OnlyUnWatchedRule(BaseRule):
         self.myId = 11
         self.actions = RULES_ACTION_JSON
 
-
     def copy(self):
         return OnlyUnWatchedRule()
-
 
     def runAction(self, actionid, channelList: ChannelList, filedata):
         if actionid == RULES_ACTION_JSON:
@@ -1102,7 +1046,6 @@ class OnlyUnWatchedRule(BaseRule):
                 return None
 
         return filedata
-
 
 
 class PlayShowInOrder(BaseRule):
@@ -1126,25 +1069,24 @@ class PlayShowInOrder(BaseRule):
 
         return param
 
-    def sortShows(self, channelList: ChannelList, filelist: list[PlaylistItem]): 
+    def sortShows(self, channelList: ChannelList, filelist: list[PlaylistItem]):
 
-        keytest = lambda x: (  x.title, x.season, x.episode ) #todo: add episode/season extraction from episode title if entries loaded from playlist
-        filelist.sort(key = keytest)
+        # todo: add episode/season extraction from episode title if entries loaded from playlist
+        def keytest(x): return (x.title, x.season, x.episode)
+        filelist.sort(key=keytest)
         return filelist
 
 
 class SetResetTime(BaseRule):
     def __init__(self):
-        self.name = ''.join(LANGUAGE(30078)) % 'x'
+        self.name = "Reset Every x Days"  # LANGUAGE(30078) % 'x'
         self.optionLabels = [LANGUAGE(30079)]
         self.optionValues = ['5']
         self.myId = 13
         self.actions = RULES_ACTION_START
 
-
     def copy(self):
         return SetResetTime()
-
 
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
@@ -1155,16 +1097,13 @@ class SetResetTime(BaseRule):
 
         return self.name
 
-
     def onAction(self, act, optionindex):
         self.onActionDigitBox(act, optionindex)
         self.validate()
         return self.optionValues[optionindex]
 
-
     def validate(self):
         self.validateDigitBox(0, 1, 50, '')
-
 
     def runAction(self, actionid, channelList: ChannelList, channeldata: Channel):
         if actionid == RULES_ACTION_START:
@@ -1183,19 +1122,21 @@ class SetResetTime(BaseRule):
             rightnow = int(time.time())
             nextreset = rightnow
 
+            settings = ChannelSettings()
             try:
-                nextreset = int(ADDON_SETTINGS.getChannelSetting(curchan, 'SetResetTime'))
+                settings = ADDON_SETTINGS.getChannelSettings(curchan)
+                nextreset = settings.SetResetTime
             except:
                 pass
 
             if rightnow >= nextreset:
                 channeldata.isValid = False
-                ADDON_SETTINGS.setChannelSetting(curchan, 'changed', 'True')
                 nextreset = rightnow + (60 * 60 * 24 * numdays)
-                ADDON_SETTINGS.setChannelSetting(curchan, 'SetResetTime', str(nextreset))
+                settings.changed = True
+                settings.SetResetTime = nextreset
+                ADDON_SETTINGS.setChannelSettings(curchan, settings)
 
         return channeldata
-
 
 
 class HandleChannelLogo(BaseRule):
@@ -1207,10 +1148,8 @@ class HandleChannelLogo(BaseRule):
         self.actions = RULES_ACTION_OVERLAY_SET_CHANNEL | RULES_ACTION_OVERLAY_SET_CHANNEL_END
         self.selectBoxOptions = [[LANGUAGE(107), LANGUAGE(106)]]
 
-
     def copy(self):
         return HandleChannelLogo()
-
 
     def getTitle(self):
         if self.optionValues[0] == LANGUAGE(107):
@@ -1218,13 +1157,12 @@ class HandleChannelLogo(BaseRule):
         else:
             return LANGUAGE(30084)
 
-
     def onAction(self, act, optionindex):
         self.onActionSelectBox(act, optionindex)
         return self.optionValues[optionindex]
 
-
     def runAction(self, actionid, overlay: TVOverlay, channeldata: Channel):
+
         if actionid == RULES_ACTION_OVERLAY_SET_CHANNEL:
             self.storedLogoValue = overlay.showChannelBug
 
@@ -1240,7 +1178,6 @@ class HandleChannelLogo(BaseRule):
         return channeldata
 
 
-
 class EvenShowsRule(BaseRule):
     def __init__(self):
         self.name = "Even Show Distribution"
@@ -1249,26 +1186,21 @@ class EvenShowsRule(BaseRule):
         self.myId = 16
         self.actions = RULES_ACTION_LIST
 
-
     def copy(self):
         return EvenShowsRule()
 
-
     def getTitle(self):
         return self.name
-
 
     def onAction(self, act, optionindex):
         self.onActionDigitBox(act, optionindex)
         self.validate()
         return self.optionValues[optionindex]
 
-
     def validate(self):
         self.validateDigitBox(0, 1, 20, 1)
 
-
-    def runAction(self, actionid, channelList: ChannelList, filelist: list[PlaylistItem]): 
+    def runAction(self, actionid, channelList: ChannelList, filelist: list[PlaylistItem]):
         if actionid == RULES_ACTION_LIST:
             self.validate()
 
@@ -1279,8 +1211,8 @@ class EvenShowsRule(BaseRule):
                 realindex = 0
                 inarow = 0
 
-                 #todo: refactor logic? groupby method
-                for index,item in enumerate( filelist):
+                # todo: refactor logic? groupby method
+                for index, item in enumerate(filelist):
                     self.log("index " + str(index) + " is " + item.toString())
                     if item.title == lastshow:
                         inarow += 1
@@ -1304,8 +1236,7 @@ class EvenShowsRule(BaseRule):
 
         return filelist
 
-
-    def insertNewShow(self, filelist:list[PlaylistItem], lastshow, startindex):
+    def insertNewShow(self, filelist: list[PlaylistItem], lastshow, startindex):
         self.log("insertNewShow: " + str(startindex) + ", " + str(len(filelist)))
         for index in range(startindex + 1, len(filelist)):
             item = filelist[index]
@@ -1338,33 +1269,46 @@ class FilterAdultContent(BaseRule):
         return channeldata
 
 
-class RulesList:        #todo: refactor with dunder methods
-    def __init__(self) -> object:
-        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(),
-                         ForceResume(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime(), FilterAdultContent()]
+class RulesList(Log):
+    ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(),
+                ForceResume(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime(), FilterAdultContent()]
 
+    def __len__():
+        return len(RulesList.ruleList)
 
-    def getRuleCount(self):
-        return len(self.ruleList)
+    def __getitem__(index):
+        # if 0 <=index<len(RulesList.ruleList):
+        return RulesList.ruleList[index]
+        #raise IndexError
 
+    def getRuleByName(name: str):
+        return next((rule for rule in RulesList.ruleList if rule.getName() == name), None)
 
-    def getRule(self, index):
-        while index < 0:
-            index += len(self.ruleList)
+    def getRuleById(Id: int) -> Optional[BaseRule]:
+        return next((rule for rule in RulesList.ruleList if rule.getId() == Id), None)
 
-        while index >= len(self.ruleList):
-            index -= len(self.ruleList)
+    def loadRules(rules: dict) -> list[BaseRule]:
+        log("RulesList-loadRules")
+        ruleList = []
+        try:
+            for setRule in rules.values():
+                ruleid = int(setRule['id'])
+                rule = RulesList.getRuleById(ruleid).copy()
+                if rule:
+                    # note : may need to factor in order/turn to dict with order as key
+                    rule.optionValues = [v for k, v in setRule.items() if 'opt' in k]
+                    ruleList.append(rule)
+        except:
+            pass
+        return ruleList
 
-        return self.ruleList[index]
-
-    def getRuleByName(self, name: str):
-        for i in range(self.getRuleCount()):
-            if self.ruleList[i].getName() == name:
-                return self.ruleList[i]
-        return None
-
-    def getRuleById(self, Id: int) -> Optional[BaseRule]:
-        for i in range(self.getRuleCount()):
-            if self.ruleList[i].getId() == Id:
-                return self.ruleList[i]
-        return None
+    def saveRules(rulelist: list[BaseRule]) -> dict:
+        log("RulesList-saveRules")
+        rules = {}
+        for ruleNum, rule in enumerate(rulelist, 1):
+            iRule = {'id': rule.myId}
+            if rule.optionValues:
+                options = {'opt_%d' % (k): v for k, v in enumerate(rule.optionValues, 1)}
+                iRule.update(options)
+            rules[ruleNum] = iRule
+        return rules

@@ -3,6 +3,7 @@
 	<category label="30000">
 		<setting id="ConfigDialog" type="action" label="30008" action="RunScript($CWD/resources/lib/Config.py)"/>
 		<setting id="ForceChannelReset" type="bool" label="30002" default="false"/>
+		<setting id="ForceChannelRebuild" type="bool" label="30210" default="false"/>
 		<setting id="AutoOff" type="enum" label="30001" lvalues="30085|30086|30087|30088|30089|30090|30091|30092|30093" default="0"/>
 		<setting id="ChannelResetSetting" type="enum" label="30004" lvalues="30094|30095|30096|30097|30098|30099" default="0"/>
 		<setting id="StartMode" type="enum" label="30011" lvalues="30100|30101|30102" default="1" />

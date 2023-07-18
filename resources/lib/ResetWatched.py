@@ -13,21 +13,16 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
-import time, threading, traceback
-import datetime
-import sys, re
-import random
+import xbmc
+import threading
+import traceback
+import re
 import json
 
-from xml.dom.minidom import parse, parseString
-
-from Playlist import Playlist, PlaylistItem
 from Globals import *
-from Channel import Channel
-from FileAccess import FileLock, FileAccess
+from Playlist import Playlist
 from log import Log
+
 
 class ResetWatched(Log):
     def __init__(self, channels: dict[int, Channel] = {}):
@@ -40,7 +35,7 @@ class ResetWatched(Log):
 
     def loadandResetPlaylist(self, filename, channel: int = None):
         self.log("Load Playlist - " + filename)
-        self.processingSemaphore.acquire()        
+        self.processingSemaphore.acquire()
 
         playlist = Playlist(channel)
         try:
@@ -52,11 +47,10 @@ class ResetWatched(Log):
 
         return self.resetPlaylist(playlist)
 
-
-    #todo: refactor logic, per playlist logic causes tvshows/movies in different channels to override/duplicate resettings
+    # todo: refactor logic, per playlist logic causes tvshows/movies in different channels to override/duplicate resettings
     #       merge, sort, select latest items and then reset once
-    #       or add tracking  variable to playlistItems watched and only update these    
-    def resetPlaylist(self, playlist: Playlist)-> bool:
+    #       or add tracking  variable to playlistItems watched and only update these
+    def resetPlaylist(self, playlist: Playlist) -> bool:
         self.log("Reset Playlist - " + str(playlist.channel or playlist.filename))
         self.processingSemaphore.acquire()
 
@@ -66,16 +60,17 @@ class ResetWatched(Log):
             M3Uresume = tmpitem.resume
             M3Ulastplayed = tmpitem.lastplayed
             episodetitle = tmpitem.episodetitle
-            self.log("Parsing index Count: " + str(M3Ucount) + " Resume: " + str(M3Uresume) + "  lastplayed: " + M3Ulastplayed + " ID: " + str(ID))
+            self.log("Parsing index Count: " + str(M3Ucount) + " Resume: " +
+                     str(M3Uresume) + "  lastplayed: " + M3Ulastplayed + " ID: " + str(ID))
 
-            if ID:         #avoiding Directory channels or any other invalid
+            if ID:  # avoiding Directory channels or any other invalid
                 if 'x' in episodetitle:
-                    #episode
+                    # episode
 
                     json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetEpisodeDetails", "params": {"episodeid": %d, "properties": ["lastplayed","playcount","resume"]}, "id": 1}' % ID
                     json_folder_detail = xbmc.executeJSONRPC(json_query)
 
-                    #next two lines accounting for how JSON returns resume info; stripping it down to just get the position
+                    # next two lines accounting for how JSON returns resume info; stripping it down to just get the position
                     json_folder_detail = json_folder_detail.replace('"resume":{', '')
                     json_folder_detail = re.sub(r',"total":.+?}', '', json_folder_detail)
 
@@ -87,23 +82,26 @@ class ResetWatched(Log):
                         JSONresume = details.get('position')
                         JSONlastplayed = details.get('lastplayed')
 
-                        #if (JSONcount != 0) and (JSONresume !=0):
+                        # if (JSONcount != 0) and (JSONresume !=0):
 
                         if (JSONcount != M3Ucount) or (JSONresume != M3Uresume) or (JSONlastplayed != M3Ulastplayed):
-                            self.log("TV JSON playcount: " + str(JSONcount) + " resume: " + str(JSONresume) + " lastplayed: " + JSONlastplayed)
-                            self.log("TV M3U playcount: " + str(M3Ucount) + " resume: " + str(M3Uresume) + " lastplayed: " + M3Ulastplayed)
+                            self.log("TV JSON playcount: " + str(JSONcount) + " resume: " +
+                                     str(JSONresume) + " lastplayed: " + JSONlastplayed)
+                            self.log("TV M3U playcount: " + str(M3Ucount) + " resume: " +
+                                     str(M3Uresume) + " lastplayed: " + M3Ulastplayed)
                             self.log("TV Resetting: " + episodetitle)
-                            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "VideoLibrary.SetEpisodeDetails", "params": {"episodeid" : %d, "lastplayed": "%s", "playcount": %d , "resume": {"position": %d}   }} ' % (ID, M3Ulastplayed, M3Ucount, M3Uresume))
+                            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "VideoLibrary.SetEpisodeDetails", "params": {"episodeid" : %d, "lastplayed": "%s", "playcount": %d , "resume": {"position": %d}   }} ' % (
+                                ID, M3Ulastplayed, M3Ucount, M3Uresume))
                             self.log("Response: " + response)
                     except:
                         self.log("Failed to reset Episode " + str(ID), xbmc.LOGWARNING)
 
                 else:
-                    #movie
+                    # movie
                     json_query = '{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovieDetails", "params": {"movieid": %d, "properties": ["lastplayed","playcount","resume"]}, "id": 1}' % ID
                     json_folder_detail = xbmc.executeJSONRPC(json_query)
 
-                    #next two lines accounting for how JSON returns resume info; stripping it down to just get the position
+                    # next two lines accounting for how JSON returns resume info; stripping it down to just get the position
                     json_folder_detail = json_folder_detail.replace('"resume":{', '')
                     json_folder_detail = re.sub(r',"total":.+?}', '', json_folder_detail)
 
@@ -115,13 +113,16 @@ class ResetWatched(Log):
                         JSONresume = details.get('position')
                         JSONlastplayed = details.get('lastplayed')
 
-                        #if (JSONcount != 0) and (JSONresume !=0):
+                        # if (JSONcount != 0) and (JSONresume !=0):
 
                         if (JSONcount != M3Ucount) or (JSONresume != M3Uresume) or (JSONlastplayed != M3Ulastplayed):
-                            self.log("Movie JSON playcount: " + str(JSONcount) + " resume: " + str(JSONresume) + " lastplayed: " + JSONlastplayed)
-                            self.log("Movie M3U playcount: " + str(M3Ucount) + " resume: " + str(M3Uresume) + " lastplayed: " + M3Ulastplayed)
+                            self.log("Movie JSON playcount: " + str(JSONcount) + " resume: " +
+                                     str(JSONresume) + " lastplayed: " + JSONlastplayed)
+                            self.log("Movie M3U playcount: " + str(M3Ucount) + " resume: " +
+                                     str(M3Uresume) + " lastplayed: " + M3Ulastplayed)
                             self.log("Movie Resetting: %s - %d" % (tmpitem.title, ID))
-                            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "VideoLibrary.SetMovieDetails", "params": {"movieid" : %d, "lastplayed": "%s", "playcount": %d , "resume": {"position": %d}   }} ' % (ID, M3Ulastplayed, M3Ucount, M3Uresume))
+                            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "VideoLibrary.SetMovieDetails", "params": {"movieid" : %d, "lastplayed": "%s", "playcount": %d , "resume": {"position": %d}   }} ' % (
+                                ID, M3Ulastplayed, M3Ucount, M3Uresume))
                             self.log("Response: " + response)
 
                     except:
@@ -130,7 +131,7 @@ class ResetWatched(Log):
 
         self.processingSemaphore.release()
 
-        if  not playlist.itemlist:
+        if not playlist.itemlist:
             return False
 
         return True

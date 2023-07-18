@@ -1,14 +1,30 @@
 2.6.0 (Palindrones)
- Added Music Genre Channels Feature
+ Added Music Genre Channels Feature(New Feature)
+ Added 'Force Rebuild Channels' option to UI settings(New Feature)
+   - added custom channel detection/retention on Migrate.py for Channel rebuilds
+ Changed Settings file format(Settings2) to json(from xml)
+   - backwards compatible (converts legacy xml to new json format)
+   - human readability
+   - Enum names instead of values
+   - cleaner structure
+
  Code refactoring for readability
-    - created/implemented Log class
+    - created/implemented Log class (super class)
     - refactored Migrate class
-    - refactoring Settings class
+    - refactored Settings class
+       - applied custom object de/serialization
+       - encapsulated and abstracted more methods
+    - added ChannelType Enum class
+    - refactored RulesList class
+      -encapsulated and abstracted methods
+    - refactored ChannelListThread class
     - pythonian changes across multiple classes
 
  -fixes
+  -fixed bug with wrong channel Playlist on EPGWindow, when 'Background Updating' enabled
   -fixed bug causing crash on channel changing(changing player playlist)
   -fixed bug on seeking forward on media when channel changed Overlay/waitForMediaPlaying method added
+
 
 2.5.2 (Palindrones)
  Working Nexus/Matrix version

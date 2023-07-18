@@ -18,22 +18,19 @@
 
 import xbmc, xbmcgui
 import xbmcvfs
-import subprocess, os
+import os
 import time, threading
-import datetime
-import sys, re
-import random, traceback
+import traceback
 
-from xml.dom.minidom import parse, parseString
 from ResetWatched import ResetWatched
 
 from Globals import *
 from Channel import Channel
 from ChannelList import ChannelList
 from ChannelListThread import ChannelListThread
-from FileAccess import FileLock, FileAccess
+from FileAccess import FileAccess
 from Migrate import Migrate
-from log import Log, LogInfo
+from log import Log
 
 try:
     from PIL import Image, ImageEnhance
@@ -41,7 +38,7 @@ except:
     pass
 
 
-class MyPlayer(xbmc.Player, LogInfo):
+class MyPlayer(xbmc.Player, Log):
     __name__ = 'Player'
 
     def __init__(self):
@@ -71,6 +68,7 @@ class MyPlayer(xbmc.Player, LogInfo):
         return super().onPlayBackError()
 
 
+
 # overlay window to catch events and change channels
 class TVOverlay(xbmcgui.WindowXMLDialog, Log):
     def __init__(self, *args, **kwargs):
@@ -84,8 +82,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
         self.channelLabel = []
         self.lastActionTime = 0 #time in seconds:float
         self.actionSemaphore = threading.BoundedSemaphore()
-        self.channelThread = ChannelListThread()
-        self.channelThread.myOverlay = self
+        self.channelThread = ChannelListThread(self)
         self.timeStarted = 0    #time in seconds:float
         self.infoOnChange = False
         self.infoDuration = 10
@@ -190,9 +187,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
                 return
 
             self.myEPG.channelLogos = self.channelLogos
-            self.maxChannels = sorted(self.channels.keys(), reverse = True)[0]
+            self.maxChannels = ADDON_SETTINGS.MaxChannel()
             self.log("maxChannels - " +  str(self.maxChannels))                 ####
-
             if not self.channels:
                 self.Error(LANGUAGE(30037))
                 return
@@ -212,7 +208,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
 
         try:
             if self.forceReset is False:
-                self.currentChannel = self.fixChannel(ADDON.getSettingInt("CurrentChannel"))
+                self.currentChannel = self.fixChannel(int(ADDON.getSetting('CurrentChannel')))
             else:
                 self.currentChannel = self.fixChannel(1)
         except:
@@ -297,32 +293,28 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
     def backupFiles(self):
         self.log('backupFiles')
 
-        if CHANNEL_SHARING is False:
+        if not CHANNEL_SHARING:
             return
 
         realloc = ADDON.getSetting('SettingsFolder')
-        FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
+        FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')   ##note: legacy, keep this for next few version
+        FileAccess.copy(realloc + '/settings2.json', SETTINGS_LOC + '/settings2.json')
         realloc = xbmcvfs.translatePath(os.path.join(realloc, 'cache')) + '/'
 
-        def listdir_fullpath(dir):
-            return [uni(os.path.join(dir, f)) for f in xbmcvfs.listdir(dir)[1]]
-
         # copy all the channels from remote location
-        file_detail = listdir_fullpath(realloc)
+        exts = ('.m3u','M3U')
+        file_detail = [f for f in xbmcvfs.listdir(realloc)[1] if f.endswith(exts)]
         for f in file_detail:
-            afile = os.path.basename(f)
-            bfile, ext = os.path.splitext(afile)
-            if ext == '.m3u' or ext == '.M3U':
-                FileAccess.copy(f, CHANNELS_LOC + afile)
+            FileAccess.copy(os.path.join(realloc, f),os.path.join( CHANNELS_LOC, f))
 
     def storeFiles(self):
         self.log('storeFiles')
 
-        if CHANNEL_SHARING is False:
+        if not CHANNEL_SHARING:
             return
 
         realloc = ADDON.getSetting('SettingsFolder')
-        FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
+        FileAccess.copy(SETTINGS_LOC + '/settings2.json', realloc + '/settings2.json')
         realloc = xbmcvfs.translatePath(os.path.join(realloc, 'cache')) + '/'
 
         for iChannel in self.channels:
@@ -676,9 +668,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
             
         while (not channelNumber in self.channels) or (self.channels[channelNumber].isValid is False):
             channelNumber = (channelNumber + direction) % (self.maxChannels + 1)
-
         return channelNumber
-
+        ##            
+        #myGenerator = (num  for num in self.channels.keys()[channelNumber::direction] if self.channels[num].isValid)
+        #return next(myGenerator, channelNumber)
+        
     # Handle all input while videos are playing
     def onAction(self, act):
         action = act.getId()
@@ -927,7 +921,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
             self.playerTimer.name = "PlayerTimer"
             self.playerTimer.start()
 
-    # cleanup and end
+    #todo: cleanup and end
     def end(self):
         self.log('end')
         # Prevent the player from setting the sleep timer
@@ -937,12 +931,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
         updateDialog = xbmcgui.DialogProgressBG()
         updateDialog.create(ADDON_NAME, '')
 
-        if self.isMaster and CHANNEL_SHARING is True:
+        if self.isMaster and CHANNEL_SHARING:
             updateDialog.update(1, message='Exiting - Removing File Locks')
             GlobalFileLock.unlockFile('MasterLock')
 
         GlobalFileLock.close()
 
+        #todo: refactor threads joining logic into one block of code
         try:
             if self.playerTimer is not None and self.playerTimer.is_alive():
                 self.playerTimer.cancel()
@@ -1017,7 +1012,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
             except:
                 pass
 
-            ADDON_SETTINGS.setSetting('LastExitTime', str(int(curtime)))
+            ADDON_SETTINGS.setSetting('LastExitTime', int(curtime))
 
         if self.timeStarted > 0 and self.isMaster:                      #todo: refactor this whole block, validcount and processing valid channels logic
             updateDialog.update(35, message='Exiting - Saving Settings')
@@ -1029,8 +1024,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
                     updateDialog.update(progress // len(validChannels) * 100)
 
                     if curChannel.mode & MODE_RESUME == 0:
-                        timeValue = str(int(curtime - self.timeStarted + curChannel.totalTimePlayed)) #todo: review ?why string value
-                        ADDON_SETTINGS.setChannelSetting(i, 'time', timeValue)
+                        timeValue = int(curtime - self.timeStarted + curChannel.totalTimePlayed)
+                        ADDON_SETTINGS.Channels[i].time = timeValue
                     else:
                         tottime = 0
                         if i == self.currentChannel:
@@ -1040,7 +1035,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog, Log):
                         else:
                             tottime = sum(curChannel.getItemDuration(pos) for pos in range(curChannel.playlistPosition)) + curChannel.showTimeOffset            #todo: clean up
 
-                        ADDON_SETTINGS.setChannelSetting(i, 'time', str(int(tottime)))
+                        ADDON_SETTINGS.Channels[i].time = int(tottime)
                     progress += 1
 
                 self.storeFiles()

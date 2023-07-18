@@ -796,3 +796,11 @@ msgstr ""
 msgctxt "#30203"
 msgid "reading music data"
 msgstr ""
+
+msgctxt "#30210"
+msgid "Rebuild channels on next start"
+msgstr ""
+
+msgctxt "#30220"
+msgid "Correct library played media information"
+msgstr ""

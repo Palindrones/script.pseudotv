@@ -16,18 +16,35 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
+from enum import IntEnum
 from Playlist import Playlist, PlaylistItem
-from Globals import *
+#from Globals import *
 from log import Log
+
+
+class ChannelType(IntEnum):
+    PLAYLIST = 0
+    NETWORK = 1
+    STUDIO = 2
+    TVSHOW_GENRE = 3
+    MOVIE_GENRE = 4
+    MIX_GENRE = 5
+    TVSHOW = 6
+    DIRECTORY = 7
+    MUSIC_GENRE = 8
+    UNKNOWN = 9999
+
 
 class Channel(Log):
     def __init__(self):
-        self.Playlist:Playlist = Playlist()
+        from Settings import ChannelSettings
+        self.Playlist: Playlist = Playlist()
         self.name = ''
+        self.type = ChannelType.UNKNOWN
         self.playlistPosition = 0
         self.showTimeOffset = 0
         self.lastAccessTime = 0
-        self.totalTimePlayed = 0    #mins
+        self.totalTimePlayed = 0  # mins
         self.fileName = ''
         self.isPaused = False
         self.isValid = False
@@ -37,62 +54,33 @@ class Channel(Log):
         self.channelNumber = 0
         self.isSetup = False
         self.isSkipped = False
-        
+        self.settings: ChannelSettings = ChannelSettings()
 
     def setPlaylist(self, filename) -> bool:
         return self.Playlist.load(filename)
 
-
-    def loadRules(self, channel):           #todo: review method duplicates  config.py
-        from Rules import RulesList, BaseRule
-
-        del self.ruleList[:]
-        listrules = RulesList()
-        self.channelNumber = channel
-
-        try:
-            rulecount = int(ADDON_SETTINGS.getChannelSetting(channel, 'rulecount'))
-
-            for i in range(rulecount):
-                ruleid = int(ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_id'))
-                rule = listrules.getRuleById(ruleid)
-                if rule:
-                    self.ruleList.append(rule.copy())
-                    for x in range(rule.getOptionCount()):
-                        self.ruleList[-1].optionValues[x] = ADDON_SETTINGS.getChannelSetting(channel, 'rule_' + str(i + 1) + '_opt_' + str(x + 1))
-
-                    self.log("Added rule - " + self.ruleList[-1].getTitle())
-        except:
-            self.ruleList = []
-
-
     def setPaused(self, paused):
         self.isPaused = paused
 
-
     def setShowTime(self, thetime):
         self.showTimeOffset = thetime // 1
-
 
     def setShowPosition(self, show):
         show = int(show)
         self.playlistPosition = self.fixPlaylistIndex(show)
 
-
     def setAccessTime(self, thetime):
         self.lastAccessTime = thetime // 1
 
-
     def getCurrentDuration(self):
         return self.getItemDuration(self.playlistPosition)
-
 
     def getItem(self, index) -> PlaylistItem:
         index = self.fixPlaylistIndex(index)
         return self.Playlist[index]
 
-    def getItemDuration(self, index):   #todo: review logic             
-        return  self.Playlist.getduration(self.fixPlaylistIndex(index))#self.getItem(index).duration#
+    def getItemDuration(self, index):  # todo: review logic
+        return self.Playlist.getduration(self.fixPlaylistIndex(index))
 
     def getTotalDuration(self):
         return self.Playlist.totalDuration
@@ -101,33 +89,28 @@ class Channel(Log):
         return self.getItemDescription(self.playlistPosition)
 
     def getItemDescription(self, index):
-        return self.getItem(index).description#self.Playlist.getdescription(self.fixPlaylistIndex(index))
+        return self.getItem(index).description
 
     def getCurrentEpisodeTitle(self):
         return self.getItemEpisodeTitle(self.playlistPosition)
 
     def getItemPlaycount(self, index):
-        return self.getItem(index).playcount #self.Playlist.getplaycount(self.fixPlaylistIndex(index))
+        return self.getItem(index).playcount
 
     def getItemEpisodeTitle(self, index):
-        return self.getItem(index).episodetitle#self.Playlist.getepisodetitle(self.fixPlaylistIndex(index))
-
+        return self.getItem(index).episodetitle
 
     def getCurrentTitle(self):
-        return self.getItem(self.playlistPosition).episodetitle#self.getItemTitle(self.playlistPosition)
-
+        return self.getItem(self.playlistPosition).episodetitle
 
     def getItemTitle(self, index):
-        return self.getItem(index).title#self.Playlist.getTitle(self.fixPlaylistIndex(index))
-
+        return self.getItem(index).title
 
     def getCurrentFilename(self):
-        return self.getItem(self.playlistPosition).filename#self.getItemFilename(self.playlistPosition)
-
+        return self.getItem(self.playlistPosition).filename
 
     def getItemFilename(self, index):
-        return self.getItem(index).filename#self.Playlist.getfilename(self.fixPlaylistIndex(index))
-
+        return self.getItem(index).filename
 
     def fixPlaylistIndex(self, index):
         if self.Playlist.size() == 0:
@@ -140,7 +123,6 @@ class Channel(Log):
             index += self.Playlist.size()
 
         return index
-
 
     def addShowPosition(self, addition):
         self.setShowPosition(self.playlistPosition + addition)

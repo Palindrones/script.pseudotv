@@ -22,8 +22,6 @@ import xbmcaddon
 import xbmc
 import xbmcgui
 import xbmcvfs
-import Settings
-
 from FileAccess import FileLock , FileAccess
 
 ADDON = xbmcaddon.Addon(id='script.pseudotv')
@@ -70,7 +68,7 @@ SETTINGS_LOC = ADDON.getAddonInfo('profile')
 CHANNEL_SHARING = False
 LOCK_LOC = xbmcvfs.translatePath(os.path.join(SETTINGS_LOC, 'cache' + '/'))
 
-if ADDON.getSetting('ChannelSharing') == "true":
+if ADDON.getSettingBool('ChannelSharing'):
     CHANNEL_SHARING = True
     LOCK_LOC = xbmcvfs.translatePath(os.path.join(ADDON.getSetting('SettingsFolder'), 'cache' + '/'))
 
@@ -91,7 +89,8 @@ MEDIA_LIMIT = [10, 25, 50, 100, 250, 500, 1000, 0]
 NUM_COLOUR = ['0xFFFF0000', '0xFF00FF00', '0xFF0000FF', '0xFFFFFF00', '0xFF00FFFF', '0xFFFFA500', '0xFFFF00FF', '0xFF808080', '0xFFFFFFFF']
 
 GlobalFileLock = FileLock()
-ADDON_SETTINGS = Settings.Settings()
+from Settings import Settings
+ADDON_SETTINGS = Settings()
 
 TIME_BAR = 'pstvTimeBar.png'
 BUTTON_NO_FOCUS = 'pstvButtonNoFocus.png'
@@ -127,15 +126,3 @@ ACTION_NUMBER_9 = 67
 ACTION_INVALID = 999
 ACTION_MOUSE_RIGHT_CLICK = 101 #Mouse Right Click
 CONTEXT_MENU = 117
-
-from enum import Enum   #todo: factor into code
-class ChannelType(Enum):    
-    PLAYLIST = 0
-    NETWORK = 1
-    STUDIO = 2
-    TVSHOW_GENRE = 3
-    MOVIE_GENRE = 4
-    MIX_GENRE = 5
-    TVSHOW = 6
-    DIRECTORY = 7
-    MUSIC_GENRE = 8
