@@ -1,3 +1,4 @@
+commit test
 2.6.0 (Palindrones)
  Added Music Genre Channels Feature(New Feature)
  Added 'Force Rebuild Channels' option to UI settings(New Feature)
